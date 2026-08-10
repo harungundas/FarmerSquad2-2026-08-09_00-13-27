@@ -3321,6 +3321,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: Cow
       objectReference: {fileID: 0}
+    - target: {fileID: 8477064042084149224, guid: 8345925ae6d2348499145ff1db66ed0a, type: 3}
+      propertyPath: m_InScenePlaced
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8477064042084149224, guid: 8345925ae6d2348499145ff1db66ed0a, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 2781712018
+      objectReference: {fileID: 0}
+    - target: {fileID: 8477064042084149224, guid: 8345925ae6d2348499145ff1db66ed0a, type: 3}
+      propertyPath: SceneMigrationSynchronization
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8477064042084149224, guid: 8345925ae6d2348499145ff1db66ed0a, type: 3}
+      propertyPath: InScenePlacedSourceGlobalObjectIdHash
+      value: 2236074934
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

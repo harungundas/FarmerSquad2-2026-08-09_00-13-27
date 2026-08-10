@@ -297,7 +297,7 @@ Animator:
   m_GameObject: {fileID: 190801629}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: f2a4fad24b937b94fb34f6c114cf0cfb, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -323,6 +323,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
   classData: {fileID: 11400000, guid: f8bc0a8faca2a7c4692dd9046dcc6fcc, type: 2}
+  sprintMultiplier: 1.6
+  jumpUpForce: 6
+  groundCheckDistance: 4.5
+  walkAnimSpeed: 16
+  runAnimSpeed: 28
 --- !u!114 &190801635
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -781,7 +786,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 523, y: 16, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1592,7 +1597,7 @@ Animator:
   m_GameObject: {fileID: 974848655}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: f2a4fad24b937b94fb34f6c114cf0cfb, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -1618,6 +1623,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
   classData: {fileID: 11400000, guid: f1a62fe46240f1749aa8f4815a96fd9e, type: 2}
+  sprintMultiplier: 1.6
+  jumpUpForce: 6
+  groundCheckDistance: 4.5
+  walkAnimSpeed: 16
+  runAnimSpeed: 28
 --- !u!114 &974848661
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1920,7 +1930,7 @@ Animator:
   m_GameObject: {fileID: 1025170063}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: f2a4fad24b937b94fb34f6c114cf0cfb, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -1946,6 +1956,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
   classData: {fileID: 11400000, guid: d6b34c2e62570074486a061eeda45ed6, type: 2}
+  sprintMultiplier: 1.6
+  jumpUpForce: 6
+  groundCheckDistance: 4.5
+  walkAnimSpeed: 16
+  runAnimSpeed: 28
 --- !u!114 &1025170069
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2248,7 +2263,7 @@ Animator:
   m_GameObject: {fileID: 1242106932}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: f2a4fad24b937b94fb34f6c114cf0cfb, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -2274,6 +2289,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
   classData: {fileID: 11400000, guid: 32e015dbc666521418508bee58d132d9, type: 2}
+  sprintMultiplier: 1.6
+  jumpUpForce: 6
+  groundCheckDistance: 4.5
+  walkAnimSpeed: 16
+  runAnimSpeed: 28
 --- !u!114 &1242106938
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2375,7 +2395,7 @@ MonoBehaviour:
       Enabled: 1
       Input:
         InputAction: {fileID: -5630151704836100654, guid: 1d6e640e716dc4ff6989b73d02023f2b, type: 3}
-        Gain: 1
+        Gain: 2.5
         CancelDeltaTime: 0
       InputValue: 0
       Driver:
@@ -2386,7 +2406,7 @@ MonoBehaviour:
       Enabled: 1
       Input:
         InputAction: {fileID: -5630151704836100654, guid: 1d6e640e716dc4ff6989b73d02023f2b, type: 3}
-        Gain: -1
+        Gain: -2.5
         CancelDeltaTime: 0
       InputValue: 0
       Driver:
@@ -2454,7 +2474,7 @@ MonoBehaviour:
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
   OrbitStyle: 0
-  Radius: 12
+  Radius: 36
   Orbits:
     Top:
       Radius: 2
@@ -2549,7 +2569,7 @@ Transform:
   m_GameObject: {fileID: 1436986937}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 523, y: 16, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2946,7 +2966,7 @@ Animator:
   m_GameObject: {fileID: 1924679616}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 170f797d0f45c4f4d81f232e31c45d5b, type: 2}
+  m_Controller: {fileID: 9100000, guid: f2a4fad24b937b94fb34f6c114cf0cfb, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -3048,6 +3068,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
   classData: {fileID: 11400000, guid: 1f524f6d801c9f94d9bd623cb0781934, type: 2}
+  sprintMultiplier: 1.6
+  jumpUpForce: 6
+  groundCheckDistance: 4.5
+  walkAnimSpeed: 16
+  runAnimSpeed: 28
 --- !u!114 &1924679624
 MonoBehaviour:
   m_ObjectHideFlags: 0

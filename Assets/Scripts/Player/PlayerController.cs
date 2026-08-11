@@ -16,8 +16,12 @@ public class PlayerController : NetworkBehaviour
     [Header("Character Data")]
     public CharacterClassData classData;
 
+    [Header("Feeding (T17 placeholder - tam mantik T18 HayCarryState.cs'de)")]
+    public bool isCarryingHay = false;
+
     [Header("Sprint")]
     public float sprintMultiplier = 1.6f;
+
 
     [Header("Jump")]
     public float jumpUpForce = 6f;

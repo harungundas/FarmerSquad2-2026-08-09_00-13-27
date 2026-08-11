@@ -22,6 +22,11 @@ public class PlayerController : NetworkBehaviour
     [Header("Sprint")]
     public float sprintMultiplier = 1.6f;
 
+    [Header("El Arabasi (Wheelbarrow.cs tarafindan disaridan set edilir, T20)")]
+    [Tooltip("El Arabasini iterken 0.5 (hiz %50 duser), aksi halde 1. Wheelbarrow.cs disaridan yazar.")]
+    public float pushSpeedMultiplier = 1f;
+
+
 
     [Header("Jump")]
     public float jumpUpForce = 6f;
@@ -33,7 +38,6 @@ public class PlayerController : NetworkBehaviour
 
     private Rigidbody rb;
     private Animator animator;
-    private bool wasRunning = false;
     private bool wasMovingWhileCarrying = false;
 
     private void Awake()
@@ -47,7 +51,7 @@ public class PlayerController : NetworkBehaviour
         return Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, groundCheckDistance + 0.1f);
     }
 
-    private void Update()
+private void Update()
     {
         if (!IsOwner) return;
 
@@ -56,7 +60,7 @@ public class PlayerController : NetworkBehaviour
 
         bool isSprinting = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed;
         float baseSpeed = classData != null ? classData.walkSpeed : 5f;
-        float actualSpeed = isSprinting ? baseSpeed * sprintMultiplier : baseSpeed;
+        float actualSpeed = (isSprinting ? baseSpeed * sprintMultiplier : baseSpeed) * pushSpeedMultiplier;
 
         float h = 0f;
         float v = 0f;
@@ -68,13 +72,13 @@ public class PlayerController : NetworkBehaviour
         Vector3 inputDir = new Vector3(h, 0f, v);
         bool isMoving = inputDir.sqrMagnitude > 0.0001f;
         float animSpeed = 0f;
+        Vector3 moveDir = Vector3.zero;
 
         if (isMoving)
         {
             inputDir.Normalize();
 
             var cam = Camera.main;
-            Vector3 moveDir;
             if (cam != null)
             {
                 Vector3 camForward = cam.transform.forward;
@@ -90,12 +94,20 @@ public class PlayerController : NetworkBehaviour
                 moveDir = inputDir;
             }
 
-            Vector3 newPosition = rb.position + moveDir * actualSpeed * Time.deltaTime;
-            rb.MovePosition(newPosition);
             transform.forward = moveDir;
-
             animSpeed = isSprinting ? runAnimSpeed : walkAnimSpeed;
         }
+
+        // Rigidbody NON-KINEMATIC (yercekimi/ziplama icin isKinematic=false birakildi) - bu yuzden
+        // MovePosition YERINE dogrudan linearVelocity kontrolu kullaniliyor. MovePosition, kinematik
+        // OLMAYAN bir Rigidbody'de fizik motorunun carpisma/ornusme durumunda beklenmedik bir "tepki
+        // hizi" (residual velocity) uretmesine sebep olabiliyordu - bu hiz input birakildiginda HICBIR
+        // YERDE sifirlanmiyordu, bu da "tusu birakinca ters yonde kaymaya devam etme" bug'inin sebebiydi.
+        // Y bileseni (yercekimi/ziplama, asagidaki Space-kontrolunce ayrica set edilir) KORUNUYOR,
+        // sadece X/Z (yatay hareket) HER FRAME ACIKCA set ediliyor (hareket yoksa da sifirlaniyor).
+        Vector3 currentVelocity = rb.linearVelocity;
+        Vector3 horizontalVelocity = moveDir * actualSpeed;
+        rb.linearVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
 
         if (keyboard.spaceKey.wasPressedThisFrame && IsGrounded())
         {
@@ -108,14 +120,6 @@ public class PlayerController : NetworkBehaviour
             animator.SetFloat("Speed", animSpeed);
 
             bool isCarrying = animator.GetBool("IsCarrying");
-            bool isRunning = isMoving && isSprinting;
-
-            if (!isCarrying)
-            {
-                if (isRunning && !wasRunning) animator.SetTrigger("RunEnter");
-                else if (!isRunning && wasRunning) animator.SetTrigger("RunExit");
-            }
-            wasRunning = isRunning;
 
             if (isCarrying)
             {

@@ -331,6 +331,7 @@ MonoBehaviour:
   classData: {fileID: 11400000, guid: f8bc0a8faca2a7c4692dd9046dcc6fcc, type: 2}
   isCarryingHay: 0
   sprintMultiplier: 1.6
+  pushSpeedMultiplier: 1
   jumpUpForce: 6
   groundCheckDistance: 4.5
   walkAnimSpeed: 16
@@ -1241,6 +1242,79 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1001 &419513178
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -6689036041284674117, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_Name
+      value: wheelbarrow_wooden_stylized
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 621.2363
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 522.22
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: -5645937942226959685, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
 --- !u!1 &506320942 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5330008955736583793, guid: fbcc994cd21fc2f4ca79b6ff0f57753d, type: 3}
@@ -2045,6 +2119,7 @@ MonoBehaviour:
   classData: {fileID: 11400000, guid: f1a62fe46240f1749aa8f4815a96fd9e, type: 2}
   isCarryingHay: 0
   sprintMultiplier: 1.6
+  pushSpeedMultiplier: 1
   jumpUpForce: 6
   groundCheckDistance: 4.5
   walkAnimSpeed: 16
@@ -2412,6 +2487,7 @@ MonoBehaviour:
   classData: {fileID: 11400000, guid: d6b34c2e62570074486a061eeda45ed6, type: 2}
   isCarryingHay: 0
   sprintMultiplier: 1.6
+  pushSpeedMultiplier: 1
   jumpUpForce: 6
   groundCheckDistance: 4.5
   walkAnimSpeed: 16
@@ -2950,6 +3026,7 @@ MonoBehaviour:
   classData: {fileID: 11400000, guid: 32e015dbc666521418508bee58d132d9, type: 2}
   isCarryingHay: 0
   sprintMultiplier: 1.6
+  pushSpeedMultiplier: 1
   jumpUpForce: 6
   groundCheckDistance: 4.5
   walkAnimSpeed: 16
@@ -3772,6 +3849,159 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 1.1075152
   m_Center: {x: 0.0000305173, y: 0.009365083, z: 0.044374477}
+--- !u!1001 &1918300062
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -6689036041284674117, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_Name
+      value: Wheelbarrow_Test
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 537.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 9.68
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 510.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2774220344278030320, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: -6689036041284674117, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1918300065}
+    - targetCorrespondingSourceObject: {fileID: -6689036041284674117, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1918300064}
+    - targetCorrespondingSourceObject: {fileID: -6689036041284674117, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1918300067}
+  m_SourcePrefab: {fileID: -5645937942226959685, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+--- !u!1 &1918300063 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -6689036041284674117, guid: 2a57d1bcfc78f154cb6a84afcb3c8166, type: 3}
+  m_PrefabInstance: {fileID: 1918300062}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1918300064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1918300063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49a71cc7146fd1b4f99e37d7e2ba4f99, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Wheelbarrow
+  isPurchased: 1
+  lightCapacity: 3
+  heavyCapacity: 1
+  interactRange: 2
+  pushSpeedMultiplier: 0.5
+  pushOffset: {x: 0, y: 0, z: -1}
+--- !u!65 &1918300065
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1918300063}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.8996487, y: 1.823549, z: 1.823549}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!54 &1918300067
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1918300063}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &1924679616 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6635245195314443262, guid: 85a04ca68dc2bde48946229f51efe8cb, type: 3}
@@ -3891,6 +4121,7 @@ MonoBehaviour:
   classData: {fileID: 11400000, guid: 1f524f6d801c9f94d9bd623cb0781934, type: 2}
   isCarryingHay: 0
   sprintMultiplier: 1.6
+  pushSpeedMultiplier: 1
   jumpUpForce: 6
   groundCheckDistance: 4.5
   walkAnimSpeed: 16
@@ -4485,3 +4716,5 @@ SceneRoots:
   - {fileID: 1700181565}
   - {fileID: 589286333}
   - {fileID: 1119965179}
+  - {fileID: 419513178}
+  - {fileID: 1918300062}

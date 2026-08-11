@@ -1382,6 +1382,8 @@ GameObject:
   - component: {fileID: 8477064042084149224}
   - component: {fileID: 5241235373820888752}
   - component: {fileID: 5174582220196529779}
+  - component: {fileID: 7252179472798764035}
+  - component: {fileID: 6682199108491914041}
   m_Layer: 0
   m_Name: Cow
   m_TagString: Untagged
@@ -1486,6 +1488,54 @@ MonoBehaviour:
   hungerDecayRate: 1
   underfedSellMultiplier: 0.6
   isUnderfed: 0
+--- !u!65 &7252179472798764035
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8396466044762145555}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.851, y: 6.6852, z: 10.61}
+  m_Center: {x: 0.1366, y: 3.2153, z: 0.7312}
+--- !u!54 &6682199108491914041
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8396466044762145555}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1 &8900297725865798848
 GameObject:
   m_ObjectHideFlags: 0

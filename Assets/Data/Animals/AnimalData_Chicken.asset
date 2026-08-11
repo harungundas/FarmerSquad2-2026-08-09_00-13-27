@@ -16,4 +16,4 @@ MonoBehaviour:
   weightClass: 0
   buyPrice: 5
   sellPrice: 10
-  prefabRef: {fileID: 0}
+  prefabRef: {fileID: 8073443194988779917, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}

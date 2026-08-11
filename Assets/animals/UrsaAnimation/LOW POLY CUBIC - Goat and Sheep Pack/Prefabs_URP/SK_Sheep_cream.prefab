@@ -1838,6 +1838,7 @@ GameObject:
   - component: {fileID: 8525355236511061477}
   - component: {fileID: 7607961302688271486}
   - component: {fileID: 8869340480733412091}
+  - component: {fileID: 5767338296060809598}
   m_Layer: 0
   m_Name: SK_Sheep_cream
   m_TagString: Untagged
@@ -1963,6 +1964,27 @@ MonoBehaviour:
   hungerDecayRate: 1
   underfedSellMultiplier: 0.6
   isUnderfed: 0
+--- !u!65 &5767338296060809598
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1868461998570734802}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.459, y: 1.3899, z: 1.5856}
+  m_Center: {x: 0.0013, y: 0.6377, z: 0.1878}
 --- !u!1 &1868461998597306862
 GameObject:
   m_ObjectHideFlags: 0

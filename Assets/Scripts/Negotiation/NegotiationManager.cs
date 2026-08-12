@@ -95,7 +95,8 @@ public class NegotiationManager : NetworkBehaviour
             playerCounter = 0f,
             finalOffer = 0f,
             resolved = false,
-            accepted = false
+            accepted = false,
+            rejectRiskPercent = CalculateRejectRiskPercent(clientId) // T25: UI'nin "Musteri Reddetme Riski: %XX" gostergesi icin Offered'a girerken hesaplanip saklanir
         };
     }
 

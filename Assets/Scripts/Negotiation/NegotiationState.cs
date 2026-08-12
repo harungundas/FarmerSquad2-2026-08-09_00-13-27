@@ -49,6 +49,12 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
     public bool resolved;
     public bool accepted;
 
+    // T25 NegotiationUI'nin "Musteri Reddetme Riski: %XX" gostergesi icin eklendi (T24'te
+    // yoktu - HANDOFF.md T25 notu: bu deger State struct'inda saklanmiyordu, sadece anlik
+    // hesaplaniyordu). RequestStartNegotiationServerRpc, Offered asamasina gecerken bu alani
+    // CalculateRejectRiskPercent ile doldurur ki UI ilk acildiginda dogru risk yuzdesini gorsun.
+    public float rejectRiskPercent;
+
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
         serializer.SerializeValue(ref stage);
@@ -61,6 +67,7 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
         serializer.SerializeValue(ref finalOffer);
         serializer.SerializeValue(ref resolved);
         serializer.SerializeValue(ref accepted);
+        serializer.SerializeValue(ref rejectRiskPercent);
     }
 
     public bool Equals(NegotiationState other)
@@ -74,7 +81,8 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
             && playerCounter.Equals(other.playerCounter)
             && finalOffer.Equals(other.finalOffer)
             && resolved == other.resolved
-            && accepted == other.accepted;
+            && accepted == other.accepted
+            && rejectRiskPercent.Equals(other.rejectRiskPercent);
     }
 
     public override bool Equals(object obj) => obj is NegotiationState other && Equals(other);
@@ -94,7 +102,8 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
             playerCounter = 0f,
             finalOffer = 0f,
             resolved = false,
-            accepted = false
+            accepted = false,
+            rejectRiskPercent = 0f
         };
     }
 }

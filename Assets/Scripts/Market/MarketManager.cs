@@ -28,6 +28,7 @@ public class MarketManager : NetworkBehaviour
     [SerializeField] private UpgradeData upgradeData;
     [SerializeField] private WalletManager walletManager;
     [SerializeField] private DayCycleManager dayCycleManager;
+    [SerializeField] private PenUpgradeSecondPen penUpgradeSecondPen;
 
     /// <summary>Market ekrani acik mi. Tum client'lar okur, sadece server yazar.</summary>
     public NetworkVariable<bool> IsOpen = new NetworkVariable<bool>(
@@ -56,6 +57,7 @@ public class MarketManager : NetworkBehaviour
     {
         if (walletManager == null) walletManager = FindObjectOfType<WalletManager>();
         if (dayCycleManager == null) dayCycleManager = FindObjectOfType<DayCycleManager>();
+        if (penUpgradeSecondPen == null) penUpgradeSecondPen = FindObjectOfType<PenUpgradeSecondPen>();
     }
 
     /// <summary>
@@ -115,12 +117,19 @@ public class MarketManager : NetworkBehaviour
 
         Debug.Log("[MarketManager] Satin alindi: " + entry.displayNameTr + " (" + entry.price + "$).");
 
-        // T34 HOOK NOKTASI: Genis Citler satin alinirsa PenUpgradeSecondPen (henuz yok) burada
-        // tetiklenmeli. Diger 5 upgrade'in oyun-ici etkisi de kendi sistemlerine bu noktadan
-        // baglanacak (Wheelbarrow aktiflestirme, AutoFeeder, hiz/yemleme/pazarlik bonuslari).
+        // T34: Genis Citler satin alinirsa ikinci agili ekle (bagimsiz PenManager/stok).
+        // Diger 5 upgrade'in oyun-ici etkisi hala kendi sistemlerine baglanmadi (Wheelbarrow
+        // aktiflestirme, AutoFeeder, hiz/yemleme/pazarlik bonuslari) - o baglar T34 kapsami DEGIL.
         if (entry.id == "WidePens")
         {
-            Debug.Log("[MarketManager] TODO (T34): PenUpgradeSecondPen henuz yazilmadi, ikinci agil eklenmedi.");
+            if (penUpgradeSecondPen != null)
+            {
+                penUpgradeSecondPen.AddSecondPenServer();
+            }
+            else
+            {
+                Debug.LogError("[MarketManager] penUpgradeSecondPen atanmamis, ikinci agil eklenemedi.");
+            }
         }
     }
 

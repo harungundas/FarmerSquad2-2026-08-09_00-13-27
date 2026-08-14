@@ -53,6 +53,16 @@ public class VehicleSpawner : NetworkBehaviour
 
     private readonly List<CustomerVehicle> queue = new List<CustomerVehicle>();
 
+    /// <summary>T26 StandInteraction icin: StandFront'ta bekleyen (varsa) araci dondurur, yoksa null.</summary>
+    public CustomerVehicle GetVehicleWaitingAtStand()
+    {
+        foreach (var v in queue)
+        {
+            if (v != null && v.IsWaitingAtStand) return v;
+        }
+        return null;
+    }
+
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
@@ -101,6 +111,7 @@ public class VehicleSpawner : NetworkBehaviour
         // Siparis-arac baglantisi (hangi aracin hangi siparisi tasidigi) T24 Pazarlik
         // Sistemi'nde kurulacak - simdilik sadece dogrulama amacli Debug.Log.
         var testOrder = new OrderData(AnimalSpecies.Chicken, testOrderCount, testOrderDirection, testAnimalData);
+        customerVehicle.CurrentOrder = testOrder; // T26: StandInteraction'in okuyabilmesi icin araca kaydedilir
         Debug.Log("[VehicleSpawner] Test araci spawn edildi: " + vehicleInstance.name +
                    " | Siparis: " + testOrder.count + "x " + testOrder.species +
                    " (" + testOrder.direction + ") basePrice=" + testOrder.basePrice);

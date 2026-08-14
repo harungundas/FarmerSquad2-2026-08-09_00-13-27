@@ -21,6 +21,11 @@ public enum NegotiationStage : byte
     Inactive,
     Offered,
     FinalOffered,
+    // Kullanici geri bildirimi sonrasi eklendi: fiyat anlasildiktan sonra oyuncu hayvanlari
+    // teslimat alanina tasiyip kasaya DONMELI, ancak o zaman islem sonuclanir (DeliveryZoneDetector
+    // T16 okunarak). Onceki tasarimda Accept aninda direkt Resolved'a geciliyordu - bu, aracin
+    // gercek teslimati beklemeden "islem bitti" sayilmasina sebep oluyordu.
+    AwaitingDelivery,
     Resolved
 }
 
@@ -55,6 +60,8 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
     // CalculateRejectRiskPercent ile doldurur ki UI ilk acildiginda dogru risk yuzdesini gorsun.
     public float rejectRiskPercent;
 
+    public bool deliverySuccess;
+
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
         serializer.SerializeValue(ref stage);
@@ -68,6 +75,7 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
         serializer.SerializeValue(ref resolved);
         serializer.SerializeValue(ref accepted);
         serializer.SerializeValue(ref rejectRiskPercent);
+        serializer.SerializeValue(ref deliverySuccess);
     }
 
     public bool Equals(NegotiationState other)
@@ -82,7 +90,8 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
             && finalOffer.Equals(other.finalOffer)
             && resolved == other.resolved
             && accepted == other.accepted
-            && rejectRiskPercent.Equals(other.rejectRiskPercent);
+            && rejectRiskPercent.Equals(other.rejectRiskPercent)
+            && deliverySuccess == other.deliverySuccess;
     }
 
     public override bool Equals(object obj) => obj is NegotiationState other && Equals(other);
@@ -103,7 +112,8 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
             finalOffer = 0f,
             resolved = false,
             accepted = false,
-            rejectRiskPercent = 0f
+            rejectRiskPercent = 0f,
+            deliverySuccess = false
         };
     }
 }

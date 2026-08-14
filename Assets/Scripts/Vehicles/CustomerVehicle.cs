@@ -20,9 +20,9 @@ using Unity.Netcode;
 public class CustomerVehicle : NetworkBehaviour
 {
     [Header("Hareket")]
-    public float maxSpeed = 15f;
+    public float maxSpeed = 50f; // T26 test sonrasi ayarlandi: spawn->stand mesafesi ~387 birim, 15f/s ile 25+ sn suruyordu (kullanici "cok yavas" dedi).
     [Tooltip("Ease egrisinde en yavas anda bile hizin maxSpeed'e orani (0 = tam durur, ease geçişi cok yavas olur).")]
-    public float minSpeedFraction = 0.2f;
+    public float minSpeedFraction = 0.35f; // ease-in/out baslangic/bitis hizi artirildi, sarkma hissi azaltmak icin
     public float arrivalThreshold = 0.5f;
 
     [Header("Model Yon Duzeltmesi")]
@@ -35,6 +35,17 @@ public class CustomerVehicle : NetworkBehaviour
     private Vector3 legStartPosition;
     private float legTotalDistance;
     private bool isWaitingAtStand = false;
+
+    /// <summary>
+    /// T26 StandInteraction icin eklendi: T22/T23'te OrderData sadece VehicleSpawner icinde
+    /// hesaplanip LOGLANIYORDU, hicbir yerde SAKLANMIYORDU. StandInteraction'in gercek
+    /// bekleyen musterinin siparisini okuyabilmesi icin VehicleSpawner.SpawnTestVehicle()
+    /// bu alani dogrudan set eder.
+    /// </summary>
+    public OrderData CurrentOrder;
+
+    /// <summary>T26: StandInteraction'in "StandFront'ta bekleyen arac var mi" kontrolu icin.</summary>
+    public bool IsWaitingAtStand => isWaitingAtStand;
     private bool isHeadingToDespawn = false;
 
     private void Awake()

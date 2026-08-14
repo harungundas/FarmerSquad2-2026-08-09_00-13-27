@@ -2,34 +2,42 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Unity.Netcode;
+using System.Globalization;
 
 /// <summary>
-/// T25 - GDD Bolum 10.4 pazarlik modali. NegotiationManager.State (NetworkVariable) OKUYARAK
-/// acilip kapanir (client-authoritative degil, sadece goruntuleme), buton tiklamalari
-/// NegotiationManager'in ServerRpc'lerini cagirir.
+/// GDD Bolum 10.4 pazarlik modali + kullanicinin kendi cizdigi mockup (numpad ile serbest
+/// teklif girisi). NegotiationManager.State (NetworkVariable) OKUYARAK acilip kapanir,
+/// buton/numpad tiklamalari NegotiationManager'in ServerRpc'lerini cagirir.
 ///
-/// SADECE pazarligi baslatan client (negotiatingClientId == LocalClientId) bu paneli gorur -
-/// diger oyunculara "Bob pazarlik yapiyor" broadcast'i ayri bir mekanizmanin (T26
-/// StandInteraction / T37 HUD Alert) isi, bu script'in kapsami DEGIL.
-///
-/// GDD 10.4'teki iki-modal gorunumu (ilk teklif / musteri-counter + oyuncu-teklif-input) TASKS.md
-/// T24'un sadelestirdigi backend'e gore UYARLANDI: NegotiationManager'da Offered -[Pazarlik Yap]->
-/// tek bir risk atisi -> FinalOffered akisi var, AYRI bir "oyuncu kendi teklifini yazar" ADIMI/RPC'si
-/// YOK. Bu yuzden ayni 3 buton (Pazarlik Yap / Kabul Et / Reddet) iki asamada farkli davranislarla
-/// YENIDEN KULLANILIYOR, serbest metin teklif input alani YOK (HANDOFF.md T25 notunda bu bilinen ve
-/// bilincli bir sadelestirme olarak isaretlenmisti).
+/// KULLANICI GERI BILDIRIMI SONRASI (T25'in ilk halinden) DEGISEN TASARIM:
+/// - Offered asamasinda artik SABIT bir formul yok: oyuncu numpad ile (1-9,0,.,<) bir sayi
+///   yazar, bu sayi PlayerInputText'te canli gosterilir, [Pazarlik Yap] bu sayiyi
+///   RequestNegotiateServerRpc(float) ile sunucuya gonderir.
+/// - [Reddet] artik Offered asamasinda da RequestRejectBaseServerRpc cagiriyor (eskiden
+///   ResetNegotiationServerRpc cagriliyordu - bu, musterinin sonucu hic ogrenmeden sessizce
+///   Inactive'e donmesine sebep oluyordu, aracin da hic ayrilmamasina yol aciyordu).
+/// - AwaitingDelivery asamasinda bu panel GORUNMEZ (oyuncu artik hayvanlari teslimat alanina
+///   tasimaya gidiyor - StandInteraction, kasaya donup tekrar F'e basilinca finalize akisini
+///   tetikler, bu panelin isi degil).
+/// - UI boyutu buyutuldu (kullanici "biraz daha buyuk olabilir" dedi).
 /// </summary>
 public class NegotiationUI : MonoBehaviour
 {
-    [Header("Baglantilar")]
+    [Header("Bağlantılar")]
     public NegotiationManager negotiationManager;
     public GameObject panelRoot;
     public TextMeshProUGUI orderText;
     public TextMeshProUGUI offerText;
     public TextMeshProUGUI riskText;
+    public TextMeshProUGUI playerInputText;
     public Button negotiateButton;
     public Button acceptButton;
     public Button rejectButton;
+
+    [Header("Numpad (child'lari GrayBtn instance'lari, her birinin TMP Text'i '1'..'9','0','.','<' olmali)")]
+    public Transform numpadContainer;
+
+    private string typedValue = "";
 
     private void Awake()
     {
@@ -38,6 +46,49 @@ public class NegotiationUI : MonoBehaviour
         if (negotiateButton != null) negotiateButton.onClick.AddListener(OnNegotiateClicked);
         if (acceptButton != null) acceptButton.onClick.AddListener(OnAcceptClicked);
         if (rejectButton != null) rejectButton.onClick.AddListener(OnRejectClicked);
+
+        SetupNumpad();
+    }
+
+    /// <summary>
+    /// Numpad butonlarina TEK TEK onClick baglamak yerine (12 farkli MCP cagrisi gerektirirdi),
+    /// her buton child'inin TMP metnini ("1".."9","0",".","<") okuyup generik OnNumpadKey(key)'e
+    /// yonlendiriyoruz - butonlar sahnede sadece dogru etiketle var olmali yeterli.
+    /// </summary>
+    private void SetupNumpad()
+    {
+        if (numpadContainer == null) return;
+        foreach (Transform child in numpadContainer)
+        {
+            var btn = child.GetComponent<Button>();
+            var label = child.GetComponentInChildren<TextMeshProUGUI>();
+            if (btn == null || label == null) continue;
+            string key = label.text;
+            btn.onClick.AddListener(() => OnNumpadKey(key));
+        }
+    }
+
+    private void OnNumpadKey(string key)
+    {
+        if (key == "<")
+        {
+            if (typedValue.Length > 0) typedValue = typedValue.Substring(0, typedValue.Length - 1);
+        }
+        else if (key == ".")
+        {
+            if (!typedValue.Contains(".")) typedValue += typedValue.Length == 0 ? "0." : ".";
+        }
+        else
+        {
+            typedValue += key;
+        }
+        UpdatePlayerInputDisplay();
+    }
+
+    private void UpdatePlayerInputDisplay()
+    {
+        if (playerInputText != null)
+            playerInputText.text = "Teklifin: " + (typedValue.Length > 0 ? typedValue : "0") + "$";
     }
 
     private void OnEnable()
@@ -54,10 +105,6 @@ public class NegotiationUI : MonoBehaviour
 
     private void Start()
     {
-        // NegotiationManager.Awake() State.Value'yu Inactive() yapiyor ama bu OnValueChanged'i
-        // TETIKLEMEZ (ilk deger atamasi degisiklik sayilmaz). Sahne yuklenirken bu script,
-        // NegotiationManager'dan SONRA Enable olursa mevcut durumu kacirmamak icin burada
-        // manuel bir kontrol yapiyoruz.
         if (negotiationManager != null)
             Refresh(negotiationManager.State.Value);
     }
@@ -81,14 +128,19 @@ public class NegotiationUI : MonoBehaviour
 
         if (state.stage == NegotiationStage.Offered)
         {
+            typedValue = ""; // Offered'a her yeni giriste (yeni musteri) teklif kutusu sıfırlanır
+            UpdatePlayerInputDisplay();
+
             if (offerText != null) offerText.text = "Müşteri Teklifi: " + state.baseOffer.ToString("0.##") + "$";
-            if (riskText != null) riskText.text = "Müşteri Reddetme Riski: %" + state.rejectRiskPercent.ToString("0.#");
+            if (riskText != null) riskText.text = RiskToVagueText(state.rejectRiskPercent); // KESIN YUZDE GOSTERILMIYOR - kullanici istegi: "biraz muallakta olmali ki heyecan olustursun"
 
             SetButtonActive(negotiateButton, true);
             SetButtonActive(acceptButton, true);
             SetButtonActive(rejectButton, true);
+            if (numpadContainer != null) numpadContainer.gameObject.SetActive(true);
+            if (playerInputText != null) playerInputText.gameObject.SetActive(true);
         }
-        else // FinalOffered
+        else // FinalOffered - artik yazilacak bir sey yok, sadece sonucu onayla/reddet
         {
             if (offerText != null) offerText.text = "Müşteri Final Teklifi: " + state.finalOffer.ToString("0.##") + "$";
             if (riskText != null) riskText.text = "Pazarlık sonuçlandı, teklifi değerlendir.";
@@ -96,6 +148,8 @@ public class NegotiationUI : MonoBehaviour
             SetButtonActive(negotiateButton, false);
             SetButtonActive(acceptButton, true);
             SetButtonActive(rejectButton, true);
+            if (numpadContainer != null) numpadContainer.gameObject.SetActive(false);
+            if (playerInputText != null) playerInputText.gameObject.SetActive(false);
         }
     }
 
@@ -106,7 +160,15 @@ public class NegotiationUI : MonoBehaviour
 
     private void OnNegotiateClicked()
     {
-        if (negotiationManager != null) negotiationManager.RequestNegotiateServerRpc();
+        if (negotiationManager == null) return;
+
+        if (!float.TryParse(typedValue, NumberStyles.Float, CultureInfo.InvariantCulture, out float value) || value <= 0f)
+        {
+            Debug.Log("[NegotiationUI] Gecerli bir teklif yazilmadi, pazarlik gonderilmedi.");
+            return;
+        }
+
+        negotiationManager.RequestNegotiateServerRpc(value);
     }
 
     private void OnAcceptClicked()
@@ -121,20 +183,23 @@ public class NegotiationUI : MonoBehaviour
     {
         if (negotiationManager == null) return;
         var stage = negotiationManager.State.Value.stage;
-        if (stage == NegotiationStage.Offered)
-        {
-            // NegotiationManager'da Offered asamasinda "base teklifi reddet / vazgec" icin AYRI
-            // bir ServerRpc YOK (sadece RequestAcceptBaseServerRpc ve RequestNegotiateServerRpc
-            // var). GDD 10.4'teki ilk modaldaki [Reddet] butonunun karsiligi olarak burada
-            // ResetNegotiationServerRpc cagriliyor: pazarlik Inactive'e doner, hicbir sonuc/ceza
-            // islenmez (musteri araci T26/T27 baglaninca ayri ele alinacak). T25 BILINCLI
-            // DEVIASYON - HANDOFF.md'ye kaydedildi.
-            negotiationManager.ResetNegotiationServerRpc();
-        }
-        else if (stage == NegotiationStage.FinalOffered)
-        {
-            negotiationManager.RequestRejectFinalServerRpc();
-        }
+        if (stage == NegotiationStage.Offered) negotiationManager.RequestRejectBaseServerRpc();
+        else if (stage == NegotiationStage.FinalOffered) negotiationManager.RequestRejectFinalServerRpc();
+    }
+
+    /// <summary>
+    /// Reddetme riskini KESIN YUZDE olarak degil, belirsiz/gerilim yaratan bir ifade olarak
+    /// gosterir (kullanici geri bildirimi: "Oyuncu icin bu kisim biraz muallakta olmali ki
+    /// heyecan olustursun"). Bilincli olarak 5 kaba kategoriye ayrildi - tam sayiyi asla
+    /// gostermez, oyuncu riski TAHMIN etmek zorunda kalir.
+    /// </summary>
+    private string RiskToVagueText(float riskPercent)
+    {
+        if (riskPercent < 12f) return "Müşteri oldukça istekli görünüyor.";
+        if (riskPercent < 28f) return "Müşteri fiyata sıcak bakıyor gibi.";
+        if (riskPercent < 48f) return "Müşterinin tepkisi belirsiz...";
+        if (riskPercent < 68f) return "Müşteri tereddütlü görünüyor.";
+        return "Müşteri oldukça huzursuz, dikkatli ol.";
     }
 
     private string SpeciesToTurkish(AnimalSpecies species)

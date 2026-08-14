@@ -4,21 +4,32 @@ using Unity.Netcode;
 /// <summary>
 /// `kasa` objesine eklenir (ARCHITECTURE.md "## Pazarlik Sistemi"). ServerRpc'lerle teklif
 /// akisini yonetir, reddetme riskini hesaplar (Base %30, Yasli -15 puan; Pazarlik Ustaligi
-/// henuz market'te yok - TASKS.md T24: "ustalik henuz market'te yok - simdilik sabit %30/%15
-/// test et" - o yuzden sadece Yasli'nin CharacterClassData.negotiationRejectReduction alani
-/// kullanilir, Ustalik'in -10 puanlik katkisi T33 Market baglaninca eklenecek).
+/// henuz market'te yok - T24 karari: sadece Yasli'nin CharacterClassData.negotiationRejectReduction
+/// alani kullanilir, Ustalik'in -10 puanlik katkisi T33 Market baglaninca eklenecek).
 ///
-/// Yon kurali (ARCHITECTURE.md): Satis basarili pazarlikta odul x1.2, Alim x0.8. Yasli'nin
-/// +%5 ek bonusu (CharacterClassData.negotiationRewardBonus): GDD bu bonusun Alim yonundeki
-/// tam formulunu belirtmiyordu - burada YORUM/karar olarak Satis'ta CARPANA EKLENIR (1.2+0.05),
-/// Alim'de ise fiyati DAHA DA dusurecek sekilde CARPANDAN CIKARILIR (0.8-0.05, yani daha ucuza
-/// alinir) seklinde uygulandi - her iki yonde de "oyuncu lehine" sonuc verir.
+/// KULLANICI GERI BILDIRIMI SONRASI (T25/T26 sonrasi revizyon) DEGISEN TASARIM:
+/// 1) SERBEST TEKLIF: Oyuncu artik sabit bir formule gore degil, NUMPAD ile kendi yazdigi bir
+///    sayiyi (RequestNegotiateServerRpc(float playerOfferedPrice)) musteriye sunuyor. "ABSURD"
+///    bir deger (Satis'ta baseOffer'in 1.5 katindan fazla, Alim'da 0.5 katindan az, veya <=0)
+///    girilirse musteri HEMEN reddedip gider (risk atisi bile yapilmaz) - kullanicinin acikca
+///    istedigi "absurd deger yazarsak kacsin" davranisi.
+/// 2) TESLIMAT ONAYI: Eskiden Kabul Et -> direkt Resolved'a geciyordu (islem "bitti" sayiliyordu,
+///    ama hayvanlar HENUZ teslimat alanina konulmamis bile olabilirdi). Simdi Kabul Et ->
+///    AwaitingDelivery (fiyat kilitlendi ama islem BITMEDI). Oyuncu hayvanlari teslimat alanina
+///    tasiyip kasaya DONMELI, tekrar F'e basinca RequestFinalizeDeliveryServerRpc()
+///    DeliveryZoneDetector'i (T16) okuyup dogru/yanlis teslimati kontrol eder.
+/// 3) ARAC HER ZAMAN AYRILIR: Reddedilen/absurd/basarisiz TUM yollarda ConcludeDealAndReset()
+///    cagrilir - bu, StandFront'taki musteri aracini (VehicleSpawner.GetVehicleWaitingAtStand())
+///    bulup CustomerVehicle.ResolveOrder() ile yola cikartir VE State'i Inactive'e sifirlar.
+///    Eskiden (T25/T26) reddedilince arac SONSUZA KADAR bekliyordu - bu kullanicinin bildirdigi
+///    somut bug'di, simdi giderildi.
 ///
-/// Basit akis (T24 "temel akis" kapsami, NegotiationState.cs'deki state machine yorumuna bkz.):
-/// tam GDD Bolum 4'teki coklu-adimli (musteri-counter, oyuncu-teklif, musteri-final-counter)
-/// pazarlik gorusmesini degil, TASKS.md'nin istedigi 4 alanli (BaseOffer/PlayerCounter/
-/// FinalOffer/Resolved) sadelestirilmis akisi uygular. Tam gorsel/coklu-adim akis NegotiationUI
-/// (T25) ile birlikte gerekirse genisletilir.
+/// Yon kurali (ARCHITECTURE.md): Satis basarili pazarlikta odul x1.2, Alim x0.8 - BU CARPAN
+/// ARTIK SADECE "Kabul Et" (pazarliksiz, base fiyata) yolunda kullanilmiyor (o zaten baseOffer'i
+/// aynen kullaniyordu, degismedi). Pazarlik (RequestNegotiateServerRpc) yolunda ise oyuncu
+/// ZATEN kendi sayisini yazdigi icin carpan/bonus sistemi bu yolda UYGULANMIYOR (BILINCLI
+/// DEVIASYON - HANDOFF.md'ye kaydedildi, ileride Yasli'nin +%5 bonusu "izin verilen absurd
+/// araligini genisletme" seklinde yeniden eklenebilir).
 /// </summary>
 [RequireComponent(typeof(NetworkObject))]
 public class NegotiationManager : NetworkBehaviour
@@ -26,9 +37,21 @@ public class NegotiationManager : NetworkBehaviour
     [Header("Reddetme Riski (yuzde puan)")]
     public float baseRejectRiskPercent = 30f;
 
-    [Header("Odul Carpanlari (basarili pazarlik)")]
+    [Header("Odul Carpanlari (SADECE pazarliksiz dogrudan Kabul Et icin - bkz. sinif yorumu)")]
     public float saleMultiplier = 1.2f;
     public float buyMultiplier = 0.8f;
+
+    [Header("Serbest Teklif Sinirlari (bu araligin disi 'absurd' sayilir, musteri hemen gider)")]
+    [Tooltip("Satista oyuncunun teklif edebilecegi ust sinir: baseOffer * bu deger.")]
+    public float maxAcceptableMultiplierSell = 1.5f;
+    [Tooltip("Alimda oyuncunun teklif edebilecegi alt sinir: baseOffer * bu deger.")]
+    public float minAcceptableMultiplierBuy = 0.5f;
+
+    [Header("Baglantilar (kullanici geri bildirimi sonrasi eklendi)")]
+    [Tooltip("StandFront'ta bekleyen araci bulup ResolveOrder() cagirmak icin (araç artik reddedilince/bittiginde HER ZAMAN ayrilir).")]
+    public VehicleSpawner vehicleSpawner;
+    [Tooltip("RequestFinalizeDeliveryServerRpc, teslimatin dogru/yanlis oldugunu buradan okur (T16).")]
+    public DeliveryZoneDetector deliveryZoneDetector;
 
     public NetworkVariable<NegotiationState> State = new NetworkVariable<NegotiationState>(
         default,
@@ -37,8 +60,6 @@ public class NegotiationManager : NetworkBehaviour
 
     private void Awake()
     {
-        // NetworkVariable'in baslangic degerini kod-ici Inactive() fabrika metoduyla eslestir
-        // (Awake'te NetworkVariable henuz network'e baglanmadigi icin dogrudan .Value atanabilir).
         State.Value = NegotiationState.Inactive();
     }
 
@@ -54,11 +75,6 @@ public class NegotiationManager : NetworkBehaviour
         State.OnValueChanged -= OnStateChanged;
     }
 
-    /// <summary>
-    /// T24 test kriteri: "Iki client'ta biri pazarlik baslatinca digeri de state degisikligini
-    /// goruyor mu (Debug.Log ile dogrula)?" - NetworkVariable her client'ta otomatik replicate
-    /// olur, bu callback HER client'ta (host dahil) kendi tarafinda tetiklenir.
-    /// </summary>
     private void OnStateChanged(NegotiationState previous, NegotiationState current)
     {
         string who = NetworkManager.Singleton != null ? ("client" + NetworkManager.Singleton.LocalClientId) : "?";
@@ -66,14 +82,10 @@ public class NegotiationManager : NetworkBehaviour
                    " negotiatingClientId=" + current.negotiatingClientId +
                    " baseOffer=" + current.baseOffer + " playerCounter=" + current.playerCounter +
                    " finalOffer=" + current.finalOffer + " resolved=" + current.resolved +
-                   " accepted=" + current.accepted);
+                   " accepted=" + current.accepted + " deliverySuccess=" + current.deliverySuccess);
     }
 
-    /// <summary>
-    /// Bir client (gelecekte StandInteraction, T26) pazarlik baslatmak icin cagirir.
-    /// Ayni anda sadece BIR pazarlik aktif olabilir (coklu-oyuncu kilidi StandInteraction'in
-    /// isi olacak - burada sadece "zaten aktifse yeni istek reddedilir" guvenligi var).
-    /// </summary>
+    /// <summary>StandInteraction (T26) pazarlik baslatmak icin cagirir.</summary>
     [ServerRpc(RequireOwnership = false)]
     public void RequestStartNegotiationServerRpc(AnimalSpecies species, int count, OrderDirection direction, float basePrice, ServerRpcParams rpcParams = default)
     {
@@ -96,11 +108,12 @@ public class NegotiationManager : NetworkBehaviour
             finalOffer = 0f,
             resolved = false,
             accepted = false,
-            rejectRiskPercent = CalculateRejectRiskPercent(clientId) // T25: UI'nin "Musteri Reddetme Riski: %XX" gostergesi icin Offered'a girerken hesaplanip saklanir
+            rejectRiskPercent = CalculateRejectRiskPercent(clientId),
+            deliverySuccess = false
         };
     }
 
-    /// <summary>Oyuncu pazarliksiz, base fiyata dogrudan [Kabul Et] der - risk/bonus YOK.</summary>
+    /// <summary>Oyuncu pazarliksiz, base fiyata dogrudan [Kabul Et] der - risk/bonus YOK. Fiyat kilitlenir, teslimat BEKLENIR (AwaitingDelivery).</summary>
     [ServerRpc(RequireOwnership = false)]
     public void RequestAcceptBaseServerRpc(ServerRpcParams rpcParams = default)
     {
@@ -108,19 +121,52 @@ public class NegotiationManager : NetworkBehaviour
 
         var s = State.Value;
         s.finalOffer = s.baseOffer;
-        s.stage = NegotiationStage.Resolved;
-        s.resolved = true;
+        s.stage = NegotiationStage.AwaitingDelivery;
         s.accepted = true;
         State.Value = s;
     }
 
-    /// <summary>Oyuncu [Pazarlik Yap] der - reddetme riski atilir, kabul edilirse FinalOffer hesaplanir.</summary>
+    /// <summary>Oyuncu Offered asamasinda base teklifi reddedip vazgecer - musteri HEMEN gider.</summary>
     [ServerRpc(RequireOwnership = false)]
-    public void RequestNegotiateServerRpc(ServerRpcParams rpcParams = default)
+    public void RequestRejectBaseServerRpc(ServerRpcParams rpcParams = default)
     {
         if (!IsValidCaller(rpcParams, NegotiationStage.Offered)) return;
 
         var s = State.Value;
+        s.stage = NegotiationStage.Resolved;
+        s.resolved = true;
+        s.accepted = false;
+        State.Value = s;
+        ConcludeDealAndReset();
+    }
+
+    /// <summary>
+    /// Oyuncu [Pazarlik Yap] der ve NUMPAD ile yazdigi kendi fiyatini (playerOfferedPrice)
+    /// sunar. Once "absurd" kontrolu (izin verilen aralik disindaysa musteri HEMEN gider,
+    /// risk atisi bile olmaz), sonra normal reddetme riski atisi yapilir.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams rpcParams = default)
+    {
+        if (!IsValidCaller(rpcParams, NegotiationStage.Offered)) return;
+
+        var s = State.Value;
+
+        bool absurd = playerOfferedPrice <= 0f ||
+            (s.direction == OrderDirection.Satis && playerOfferedPrice > s.baseOffer * maxAcceptableMultiplierSell) ||
+            (s.direction == OrderDirection.Alim && playerOfferedPrice < s.baseOffer * minAcceptableMultiplierBuy);
+
+        if (absurd)
+        {
+            Debug.Log("[NegotiationManager] Absurd teklif (" + playerOfferedPrice + "), musteri hemen gidiyor.");
+            s.stage = NegotiationStage.Resolved;
+            s.resolved = true;
+            s.accepted = false;
+            State.Value = s;
+            ConcludeDealAndReset();
+            return;
+        }
+
         float rejectRisk = CalculateRejectRiskPercent(s.negotiatingClientId);
         bool rejected = Random.Range(0f, 100f) < rejectRisk;
 
@@ -130,30 +176,29 @@ public class NegotiationManager : NetworkBehaviour
             s.resolved = true;
             s.accepted = false;
             State.Value = s;
+            ConcludeDealAndReset();
             return;
         }
 
-        float multiplier = CalculateRewardMultiplier(s.direction, s.negotiatingClientId);
-        s.playerCounter = s.baseOffer; // T24 basit akis: ayri bir oyuncu-teklif GIRISI yok (UI T25'te), sembolik olarak baseOffer kaydedilir
-        s.finalOffer = s.baseOffer * multiplier;
+        s.playerCounter = playerOfferedPrice;
+        s.finalOffer = playerOfferedPrice;
         s.stage = NegotiationStage.FinalOffered;
         State.Value = s;
     }
 
-    /// <summary>Oyuncu musterinin son teklifini (FinalOffer) kabul eder.</summary>
+    /// <summary>Oyuncu musterinin (kendi yazdigi ve kabul edilen) son teklifini onaylar. Fiyat kilitlenir, teslimat BEKLENIR.</summary>
     [ServerRpc(RequireOwnership = false)]
     public void RequestAcceptFinalServerRpc(ServerRpcParams rpcParams = default)
     {
         if (!IsValidCaller(rpcParams, NegotiationStage.FinalOffered)) return;
 
         var s = State.Value;
-        s.stage = NegotiationStage.Resolved;
-        s.resolved = true;
+        s.stage = NegotiationStage.AwaitingDelivery;
         s.accepted = true;
         State.Value = s;
     }
 
-    /// <summary>Oyuncu musterinin son teklifini reddedip pazarliktan vazgecer.</summary>
+    /// <summary>Oyuncu son teklifi reddedip pazarliktan vazgecer - musteri HEMEN gider.</summary>
     [ServerRpc(RequireOwnership = false)]
     public void RequestRejectFinalServerRpc(ServerRpcParams rpcParams = default)
     {
@@ -164,16 +209,81 @@ public class NegotiationManager : NetworkBehaviour
         s.resolved = true;
         s.accepted = false;
         State.Value = s;
+        ConcludeDealAndReset();
     }
 
     /// <summary>
-    /// Pazarligi Inactive durumuna sifirlar. T26 (StandInteraction) Resolved sonrasi (veya
-    /// oyuncu stanttan ayrilinca) bunu cagirmali - simdilik disaridan manuel de cagirilabilecek
-    /// sekilde public birakildi.
+    /// Oyuncu (fiyat AwaitingDelivery'de kilitliyken) hayvanlari teslimat alanina tasiyip
+    /// kasaya DONUP tekrar F'e basinca StandInteraction bunu cagirir. DeliveryZoneDetector'i
+    /// (T16) okuyup dogru tur+sayida hayvan var mi kontrol eder, araci HER TURLU yola cikartir
+    /// (dogruysa siparisi alip gider, yanlissa almadan gider - kullanicinin istedigi davranis).
+    /// WalletManager/PenManager/PrestigeManager (T29/T35) HENUZ YOK - sonuc simdilik sadece
+    /// Debug.Log ile STUB olarak bildiriliyor, o sistemler baglanınca gercek cagrilarla degistirilmeli.
+    /// Herhangi bir oyuncu onaylayabilir (co-op oyun, kayitli negotiatingClientId ile sinirlamadik).
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestFinalizeDeliveryServerRpc(ServerRpcParams rpcParams = default)
+    {
+        var s = State.Value;
+        if (s.stage != NegotiationStage.AwaitingDelivery)
+        {
+            Debug.LogWarning("[NegotiationManager] Teslimat onayi icin uygun asamada degil: " + s.stage);
+            return;
+        }
+
+        bool success = false;
+        if (deliveryZoneDetector != null)
+        {
+            var inside = deliveryZoneDetector.AnimalsInside;
+            int matchingCount = 0;
+            foreach (var animal in inside)
+            {
+                if (animal != null && animal.animalData != null && animal.animalData.species == s.species) matchingCount++;
+            }
+            success = matchingCount == s.count && inside.Count == s.count;
+        }
+        else
+        {
+            Debug.LogWarning("[NegotiationManager] deliveryZoneDetector atanmamis, teslimat kontrolu yapilamiyor - basarisiz sayiliyor.");
+        }
+
+        if (success)
+        {
+            Debug.Log("[NegotiationManager] STUB: Dogru teslimat! " + s.count + "x " + s.species + " (" + s.direction + ") " + s.finalOffer + "$ - WalletManager/PenManager T29/T35 baglaninca gercek islenecek.");
+        }
+        else
+        {
+            Debug.Log("[NegotiationManager] STUB: Yanlis/eksik teslimat! Beklenen " + s.count + "x " + s.species + " - PrestigeManager T35 baglaninca -0.25 islenecek.");
+        }
+
+        s.stage = NegotiationStage.Resolved;
+        s.resolved = true;
+        s.deliverySuccess = success;
+        State.Value = s;
+        ConcludeDealAndReset();
+    }
+
+    /// <summary>
+    /// Pazarligi Inactive durumuna sifirlar. Normal akiste artik gerekmiyor (ConcludeDealAndReset
+    /// tum sonlanma yollarinda otomatik cagriliyor) - acil durum/manuel mudahale icin public birakildi.
     /// </summary>
     [ServerRpc(RequireOwnership = false)]
     public void ResetNegotiationServerRpc()
     {
+        State.Value = NegotiationState.Inactive();
+    }
+
+    /// <summary>
+    /// TUM sonlanma yollarinin (reddedildi/absurd/basarili teslimat/basarisiz teslimat) ortak
+    /// son adimi: StandFront'ta bekleyen musteri aracini bulup HER TURLU yola cikartir (kullanici
+    /// geri bildirimi: "araç stand önünde beklemeye devam etmesin"), sonra State'i Inactive'e sifirlar.
+    /// </summary>
+    private void ConcludeDealAndReset()
+    {
+        var vehicle = vehicleSpawner != null ? vehicleSpawner.GetVehicleWaitingAtStand() : null;
+        if (vehicle != null) vehicle.ResolveOrder();
+        else Debug.LogWarning("[NegotiationManager] ConcludeDealAndReset: bekleyen arac bulunamadi (vehicleSpawner atanmamis olabilir).");
+
         State.Value = NegotiationState.Inactive();
     }
 
@@ -202,20 +312,6 @@ public class NegotiationManager : NetworkBehaviour
             risk -= classData.negotiationRejectReduction;
         }
         return Mathf.Clamp(risk, 0f, 100f);
-    }
-
-    private float CalculateRewardMultiplier(OrderDirection direction, ulong clientId)
-    {
-        float bonus = 0f;
-        var classData = GetClassData(clientId);
-        if (classData != null)
-        {
-            bonus = classData.negotiationRewardBonus;
-        }
-
-        return direction == OrderDirection.Satis
-            ? saleMultiplier + bonus
-            : buyMultiplier - bonus;
     }
 
     private CharacterClassData GetClassData(ulong clientId)

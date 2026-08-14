@@ -8,8 +8,10 @@ using Unity.Netcode;
 /// Günlük araç sayısı tablosu (GDD Bölüm 5) burada tutulur; solo modda (oyuncu sayısı==1)
 /// Gün10+ için 6 ile sınırlanır (ARCHITECTURE.md Bölüm 0 delta tablosu).
 ///
-/// NOT: Prestij bonus araçları (T35 PrestigeManager, henüz yok) GetVehicleCountForDay'in
-/// döndürdüğü tabana AYRICA eklenir - bu metod SADECE taban+solo-cap hesaplar.
+/// NOT: Prestij bonus araçları (T35 PrestigeManager) GetVehicleCountForDay'in döndürdüğü tabana
+/// GetTotalVehicleCountForToday() içinde AYRICA eklenir - GetVehicleCountForDay SADECE
+/// taban+solo-cap hesaplar, bilerek boyle birakildi (PrestigeManager'in cagirdigi ConsumeBonusServer
+/// gun basinda BonusVehiclesToday'i doldurur).
 /// Gerçek gün geçişi / QuotaManager bağlantısı T32'de kurulacak (bu task'ta YOK, kasıtlı).
 /// </summary>
 [RequireComponent(typeof(NetworkObject))]
@@ -29,6 +31,10 @@ public class DayCycleManager : NetworkBehaviour
     public MarketManager marketManager;
     [Tooltip("Kota basarisizsa acilir. T39'da doldurulacak stub (Assets/Scripts/UI/LoseScreenController.cs).")]
     public LoseScreenController loseScreenController;
+
+    [Header("T35: Prestij Baglantisi")]
+    [Tooltip("Gun basinda bekleyen bonus arac havuzunu tuketmek icin (ConsumeBonusServer).")]
+    public PrestigeManager prestigeManager;
 
 
     // GDD Bolum 5 - Taban Musteri Sayisi (index 0 = Gun 1 ... index 17 = Gun 18)
@@ -58,6 +64,13 @@ public class DayCycleManager : NetworkBehaviour
 
     public NetworkVariable<bool> IsFreeMode = new NetworkVariable<bool>(
         false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    /// <summary>T35: Bugunku gun icin PrestigeManager'dan devralinan bonus arac sayisi (gun basinda
+    /// ConsumeBonusServer ile okunur, o gune ozeldir).</summary>
+    public NetworkVariable<int> BonusVehiclesToday = new NetworkVariable<int>(
+        0,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server);
 
@@ -93,12 +106,17 @@ public class DayCycleManager : NetworkBehaviour
         }
     }
 
-    private void StartDayServer(int day)
+private void StartDayServer(int day)
     {
         Timer.Value = customerWindowSeconds;
         IsFreeMode.Value = false;
+
+        BonusVehiclesToday.Value = (prestigeManager != null) ? prestigeManager.ConsumeBonusServer() : 0;
+
         Debug.Log("[DayCycleManager] Gun " + day + " basladi. Pencere: " + customerWindowSeconds +
-                   "sn. Bugunku taban arac sayisi: " + GetVehicleCountForDay(day));
+                   "sn. Bugunku taban arac sayisi: " + GetVehicleCountForDay(day) +
+                   " + Prestij bonusu " + BonusVehiclesToday.Value +
+                   " = toplam " + GetTotalVehicleCountForToday());
     }
 
     private void EnterFreeModeServer()
@@ -135,6 +153,25 @@ public class DayCycleManager : NetworkBehaviour
 
         return Mathf.Min(baseCount, MaxVehiclesPerDay);
     }
+
+/// <summary>
+    /// T35: GetVehicleCountForDay'in dondurdugu taban+solo-cap degerine, PrestigeManager'dan o
+    /// gun icin devralinan bonusu (BonusVehiclesToday) ekler. Ust sinir (GDD: "Maksimum Arac
+    /// Sinir: 10 arac/gun (bonus dahil)") bonus eklendikten SONRA tekrar uygulanir - solo modda
+    /// Gun10+ icin bu sinir 6'dir (ARCHITECTURE.md Bolum 0).
+    /// </summary>
+    public int GetTotalVehicleCountForToday()
+    {
+        int baseCount = GetVehicleCountForDay(CurrentDay.Value);
+        int total = baseCount + BonusVehiclesToday.Value;
+
+        int playerCount = (NetworkManager.Singleton != null) ? NetworkManager.Singleton.ConnectedClients.Count : 1;
+        bool isSolo = playerCount <= 1;
+        int cap = (isSolo && CurrentDay.Value >= SoloDayThreshold) ? SoloVehicleCap : MaxVehiclesPerDay;
+
+        return Mathf.Min(total, cap);
+    }
+
 
     private void OnFreeModeChanged(bool previous, bool current)
     {

@@ -46,6 +46,8 @@ public class NegotiationManager : NetworkBehaviour
     public DeliveryZoneDetector deliveryZoneDetector;
     [Tooltip("T29: Satis/Alim para hareketleri buradan islenir.")]
     public WalletManager walletManager;
+    [Tooltip("T35: Satis teslimat sonucu (basarili/hatali) buraya bildirilir. Alim sinyal GONDERMEZ - bkz. PrestigeManager.cs sinif yorumu.")]
+    public PrestigeManager prestigeManager;
 
     [Header("Hayvan Veritabani (T28 - Alim siparisinde dogru prefabi spawn etmek icin)")]
     [Tooltip("5 turun tamami icin AnimalData referanslarini (T04'teki asset'ler) buraya elle surukle.")]
@@ -275,7 +277,16 @@ public class NegotiationManager : NetworkBehaviour
         }
         else
         {
-            Debug.Log("[NegotiationManager] Yanlis/eksik teslimat! Beklenen " + s.count + "x " + s.species + " - para hareketi yok, PrestigeManager T35 baglaninca -0.25 islenecek.");
+            Debug.Log("[NegotiationManager] Yanlis/eksik teslimat! Beklenen " + s.count + "x " + s.species + " - para hareketi yok.");
+        }
+
+        if (prestigeManager != null)
+        {
+            prestigeManager.ReportDeliveryResultServer(success);
+        }
+        else
+        {
+            Debug.LogWarning("[NegotiationManager] prestigeManager atanmamis, Prestij puani islenemedi.");
         }
 
         s.stage = NegotiationStage.Resolved;

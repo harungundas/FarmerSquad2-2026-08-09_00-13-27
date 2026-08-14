@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb5105e0b8134c4428a44d545f21eebd, type: 3}
+  m_Name: UpgradeData
+  m_EditorClassIdentifier: Assembly-CSharp::UpgradeData
+  upgrades:
+  - id: Wheelbarrow
+    displayNameTr: "El Arabas\u0131"
+    category: 0
+    price: 20
+  - id: AutoFeeder
+    displayNameTr: "Yem Da\u011F\u0131t\u0131c\u0131"
+    category: 0
+    price: 30
+  - id: WidePens
+    displayNameTr: "Geni\u015F \xC7itler"
+    category: 0
+    price: 25
+  - id: LogisticsFitness
+    displayNameTr: Lojistik Kondisyonu
+    category: 1
+    price: 30
+  - id: FarmSkill
+    displayNameTr: "\xC7iftlik Becerisi"
+    category: 1
+    price: 20
+  - id: NegotiationMastery
+    displayNameTr: "Pazarl\u0131k Ustal\u0131\u011F\u0131"
+    category: 1
+    price: 35

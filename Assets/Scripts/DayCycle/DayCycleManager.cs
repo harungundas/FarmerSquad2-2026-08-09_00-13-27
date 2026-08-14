@@ -217,10 +217,24 @@ public class DayCycleManager : NetworkBehaviour
             Debug.LogWarning("[DayCycleManager] marketManager atanmamis (T33 henuz yok) - market acilamadi.");
         }
 
-        // GECICI DEVIATION (T33'e kadar): MarketManager henuz stub oldugu ve oyuncunun market'te
-        // "[Sonraki Gune Gec]" demesini bekleyecek gercek bir mekanizma olmadigi icin, gun gecisi
-        // burada DOGRUDAN yapiliyor. T33'te MarketManager kendi butonuyla StartNextDayServer'i
-        // (veya bir callback/event'i) tetikleyecek sekilde bu satir KALDIRILMALI.
+        // T33: Gun gecisi artik burada OTOMATIK yapilmiyor. MarketManager acildi (yukarida),
+        // oyuncu market'te istedigi upgrade'leri satin alip [Sonraki Gune Gec] butonuna basana
+        // kadar burada bekleniyor - o buton MarketManager.RequestCloseAndAdvanceServerRpc() ->
+        // AdvanceToNextDayServer() (asagida) zincirini tetikleyecek.
+    }
+
+    /// <summary>
+    /// T33: MarketManager (oyuncu [Sonraki Gune Gec] dedikten sonra) tarafindan cagrilan public
+    /// giris noktasi. Onceki StartNextDayServer() private kaldi (DebugStartNextDay hala onu
+    /// kullaniyor, kota kontrolu ATLAYARAK ham gun atlama icin).
+    /// </summary>
+    public void AdvanceToNextDayServer()
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("[DayCycleManager] AdvanceToNextDayServer sadece server'da calisir.");
+            return;
+        }
         StartNextDayServer();
     }
 

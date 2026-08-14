@@ -48,7 +48,18 @@ public class VehicleSpawner : NetworkBehaviour
     public Transform queueSlot2;
     public Transform queueSlot3;
 
-    public Transform DespawnPoint => despawnPoint;
+    
+    [Header("Gun Dongusu Baglantisi (T31)")]
+    [Tooltip("DayCycleManager 240sn timer'i dolunca StopAcceptingCustomers() cagirir; false ise yeni arac spawn edilmez.")]
+    public bool IsAcceptingCustomers = true;
+
+    /// <summary>DayCycleManager (T31) 240sn dolunca bunu cagirir.</summary>
+    public void StopAcceptingCustomers()
+    {
+        IsAcceptingCustomers = false;
+        Debug.Log("[VehicleSpawner] Musteri gelisi durduruldu (DayCycleManager tarafindan).");
+    }
+public Transform DespawnPoint => despawnPoint;
     public Transform StandFrontPoint => standFrontPoint;
 
     private readonly List<CustomerVehicle> queue = new List<CustomerVehicle>();
@@ -76,6 +87,12 @@ public class VehicleSpawner : NetworkBehaviour
 
     private void SpawnTestVehicle()
     {
+        if (!IsAcceptingCustomers)
+        {
+            Debug.Log("[VehicleSpawner] IsAcceptingCustomers=false, spawn iptal (Serbest Mod).");
+            return;
+        }
+
         if (truckPrefab == null)
         {
             Debug.LogError("[VehicleSpawner] truckPrefab atanmamis, spawn iptal.");

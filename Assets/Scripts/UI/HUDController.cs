@@ -38,7 +38,28 @@ public class HUDController : MonoBehaviour
     [Header("Sağ Üst - Kasa / Kota Hedefi")]
     public TextMeshProUGUI walletQuotaText;
 
-    private void OnEnable()
+    [Header("Dinamik Uyarılar (T37)")]
+    [Tooltip("Geçici mesajlar için (\"Araç geldi!\", \"Yanlış hayvan teslimat alanına konuldu!\" gibi). Başlangıçta kapalı olmalı.")]
+    public TextMeshProUGUI alertText;
+    [Tooltip("Opsiyonel: alertText'in arka plan paneli (panel_1.png). Atanmışsa gizleme/gösterme BUNUN uzerinden yapılır (metin + arka plan birlikte); atanmamışsa sadece alertText.gameObject kullanılır.")]
+    public GameObject alertPanel;
+
+    /// <summary>
+    /// Sahnede tek bir HUDController varsayılır (Faz 9). VehicleSpawner ve NegotiationManager
+    /// gibi ağ scriptleri Inspector referansı yerine bu static Instance üzerinden ShowAlert
+    /// çağırır - her client'ın KENDİ local HUDController'ına ClientRpc ile ulaşılır.
+    /// </summary>
+    public static HUDController Instance;
+
+
+private void Awake()
+    {
+        Instance = this;
+        SetAlertVisible(false);
+    }
+
+    
+private void OnEnable()
     {
         if (walletManager != null)
         {
@@ -169,5 +190,67 @@ public class HUDController : MonoBehaviour
         }
 
         return best != -1 ? best : quotaData.quotas[quotaData.quotas.Length - 1].day;
+    }
+
+
+
+    /// <summary>
+    /// T37: Geçici bir uyarı mesajı gösterir, `duration` saniye sonra otomatik gizler.
+    /// Coroutine/animasyon YOK (basit tutulmalı, TASKS.md T37 notu) - CancelInvoke+Invoke yeterli.
+    /// alertText Inspector'dan bağlanmamışsa sessizce hiçbir şey yapmaz (Debug.LogWarning ile uyarır).
+    /// </summary>
+public void ShowAlert(string message, float duration)
+    {
+        if (alertText == null)
+        {
+            Debug.LogWarning("[HUDController] alertText atanmamis, uyari gosterilemedi: " + message);
+            return;
+        }
+
+        CancelInvoke(nameof(HideAlert));
+        alertText.text = message;
+        SetAlertVisible(true);
+        Invoke(nameof(HideAlert), duration);
+    }
+
+private void HideAlert()
+    {
+        SetAlertVisible(false);
+    }
+
+    private void SetAlertVisible(bool visible)
+    {
+        if (alertPanel != null) alertPanel.SetActive(visible);
+        else if (alertText != null) alertText.gameObject.SetActive(visible);
+    }
+
+    /// <summary>T37: VehicleSpawner'in ClientRpc'si bunu cagirir - "Arac geldi! Siparis: 2x Tavuk" gibi.</summary>
+    public void ShowVehicleArrivedAlert(AnimalSpecies species, int count)
+    {
+        ShowAlert("Araç geldi! Sipariş: " + count + "x " + TurkishSpeciesName(species), 4f);
+    }
+
+    /// <summary>T37: NegotiationManager'in ClientRpc'si bunu cagirir (yanlis/eksik teslimat).</summary>
+    public void ShowWrongDeliveryAlert()
+    {
+        ShowAlert("Yanlış hayvan teslimat alanına konuldu!", 4f);
+    }
+
+    /// <summary>
+    /// AnimalSpecies enum'u (Chicken/Sheep/Goat/Cow/Horse, ingilizce) - bu projede baska hicbir
+    /// yerde Turkce isim eslemesi yok (AnimalData.cs sadece enum'u tutuyor), bu yuzden HUD
+    /// katmaninda (kullaniciya gorunen tek yer) burada tanimlandi.
+    /// </summary>
+    private string TurkishSpeciesName(AnimalSpecies species)
+    {
+        switch (species)
+        {
+            case AnimalSpecies.Chicken: return "Tavuk";
+            case AnimalSpecies.Sheep: return "Koyun";
+            case AnimalSpecies.Goat: return "Keçi";
+            case AnimalSpecies.Cow: return "İnek";
+            case AnimalSpecies.Horse: return "At";
+            default: return species.ToString();
+        }
     }
 }

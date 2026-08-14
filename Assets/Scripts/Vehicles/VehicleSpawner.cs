@@ -132,6 +132,9 @@ public Transform DespawnPoint => despawnPoint;
         Debug.Log("[VehicleSpawner] Test araci spawn edildi: " + vehicleInstance.name +
                    " | Siparis: " + testOrder.count + "x " + testOrder.species +
                    " (" + testOrder.direction + ") basePrice=" + testOrder.basePrice);
+
+        NotifyVehicleArrivedClientRpc(testOrder.species, testOrder.count);
+
     }
 
     private void RefreshQueueTargets()
@@ -157,5 +160,17 @@ public Transform DespawnPoint => despawnPoint;
         else Destroy(vehicle.gameObject);
 
         RefreshQueueTargets();
+    }
+
+
+
+    /// <summary>T37: Sunucu tarafinda spawn tamamlaninca tum client'lara "Arac geldi!" HUD uyarisini tetikler.</summary>
+    [ClientRpc]
+    private void NotifyVehicleArrivedClientRpc(AnimalSpecies species, int count)
+    {
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.ShowVehicleArrivedAlert(species, count);
+        }
     }
 }

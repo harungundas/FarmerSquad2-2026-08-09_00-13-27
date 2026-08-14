@@ -278,6 +278,8 @@ public class NegotiationManager : NetworkBehaviour
         else
         {
             Debug.Log("[NegotiationManager] Yanlis/eksik teslimat! Beklenen " + s.count + "x " + s.species + " - para hareketi yok.");
+            NotifyWrongDeliveryClientRpc();
+
         }
 
         if (prestigeManager != null)
@@ -436,5 +438,17 @@ public class NegotiationManager : NetworkBehaviour
 
         var pc = client.PlayerObject.GetComponent<PlayerController>();
         return pc != null ? pc.classData : null;
+    }
+
+
+
+    /// <summary>T37: Yanlis/eksik teslimat sonucunda tum client'lara HUD uyarisini tetikler.</summary>
+    [ClientRpc]
+    private void NotifyWrongDeliveryClientRpc()
+    {
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.ShowWrongDeliveryAlert();
+        }
     }
 }

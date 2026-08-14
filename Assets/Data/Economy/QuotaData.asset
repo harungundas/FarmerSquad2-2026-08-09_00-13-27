@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 985dc704ffd4e734d83d0a60939fe381, type: 3}
+  m_Name: QuotaData
+  m_EditorClassIdentifier: Assembly-CSharp::QuotaData
+  quotas:
+  - day: 3
+    requiredAmount: 45
+  - day: 6
+    requiredAmount: 115
+  - day: 9
+    requiredAmount: 250
+  - day: 12
+    requiredAmount: 400
+  - day: 15
+    requiredAmount: 520
+  - day: 18
+    requiredAmount: 700

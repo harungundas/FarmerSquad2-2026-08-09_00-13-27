@@ -11,6 +11,10 @@ using UnityEngine.UI;
 /// [Lobi Oluştur]=StartHost(), [Lobiye Katıl]=StartClient() olarak baglandi - gercek bir Steam
 /// lobi kodu uretimi/girisi YOK (T41 veya gercek T07'ye ertelendi).
 ///
+/// T41 EKLEMESI: StartHost()/StartClient() basarili baslatma sonrasi artik LobbyUI.Show()
+/// cagriliyor (oyuncu listesi + host-only kick gostermek icin). lobbyUI atanmamissa (henuz
+/// kurulmamis bir sahnede) stub log basar, hata firlatmaz.
+///
 /// Tek sahne projesi (Build Settings'te sadece SampleScene var). Diger ekranlarla (HUDCanvas,
 /// WinScreenCanvas, LoseScreenController, MarketCanvas) AYNI desen: bu panel de kendi
 /// Canvas'inda, sahne gecisi degil panelRoot.SetActive(false/true) ile acilip kapanir.
@@ -27,6 +31,9 @@ public class MainMenuController : MonoBehaviour
     [Header("Ag")]
     [SerializeField] private GameNetworkManager gameNetworkManager;
 
+    [Header("Lobi (T41)")]
+    [SerializeField] private LobbyUI lobbyUI;
+
     [Header("Ayarlar (opsiyonel - SettingsUI T42'de kurulacak, henuz YOK)")]
     [SerializeField] private GameObject settingsPanelRoot;
 
@@ -41,7 +48,8 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>[Lobi Oluştur] (BlueBtn). GameNetworkManager.StartHost() cagirir (gercek Steam
-    /// lobi kodu yok - bkz. sinif yorumu). Basarili baslatma sonrasi menu paneli kapanir.</summary>
+    /// lobi kodu yok - bkz. sinif yorumu). Basarili baslatma sonrasi menu paneli kapanir ve
+    /// LobbyUI acilir.</summary>
     private void OnCreateLobbyClicked()
     {
         if (gameNetworkManager == null)
@@ -52,11 +60,12 @@ public class MainMenuController : MonoBehaviour
 
         gameNetworkManager.StartHost();
         if (panelRoot != null) panelRoot.SetActive(false);
+        ShowLobbyUI();
     }
 
     /// <summary>[Lobiye Katıl] (BlueBtn). GameNetworkManager.StartClient() cagirir - lobi kodu
     /// girisi YOK, NetworkManager'in Inspector'daki varsayilan UTP adresine baglanir (bkz. sinif
-    /// yorumu).</summary>
+    /// yorumu). Basarili baslatma sonrasi menu paneli kapanir ve LobbyUI acilir.</summary>
     private void OnJoinLobbyClicked()
     {
         if (gameNetworkManager == null)
@@ -67,6 +76,21 @@ public class MainMenuController : MonoBehaviour
 
         gameNetworkManager.StartClient();
         if (panelRoot != null) panelRoot.SetActive(false);
+        ShowLobbyUI();
+    }
+
+    /// <summary>lobbyUI atanmissa Show() cagirir; atanmamissa (henuz kurulmamis bir sahnede)
+    /// sessizce stub log basar, hata firlatmaz.</summary>
+    private void ShowLobbyUI()
+    {
+        if (lobbyUI != null)
+        {
+            lobbyUI.Show();
+        }
+        else
+        {
+            Debug.Log("[MainMenuController] lobbyUI atanmamis - LobbyUI (T41) henuz baglanmamis.");
+        }
     }
 
     /// <summary>[Ayarlar] (GrayBtn). SettingsUI (T42) henuz kurulu degil - settingsPanelRoot

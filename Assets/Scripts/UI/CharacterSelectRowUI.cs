@@ -18,17 +18,29 @@ public class CharacterSelectRowUI : MonoBehaviour
     private int characterIndex;
     private Action<int> onSelect;
 
-    private void Awake()
-    {
-        if (selectButton != null) selectButton.onClick.AddListener(HandleSelectClicked);
-    }
+// Awake KASITLI OLARAK BURADA DEGIL: buton dinleyicisi artik Setup() icinde baglaniyor
+    // (bkz. Setup yorumu) - iki ayri Awake zincirine (bu sinif + CharacterSelectUI) bagimli
+    // kirilgan init sirasi, canli testte (2-client, T43 dogrulamasi) onSelect callback'inin
+    // NULL kalmasina yol acmisti (Awake tetiklenmis ama callback bos kalmisti - kok neden tam
+    // netlesmedi, muhtemelen Play modu/domain-reload zamanlamasi). OnEnable her panel
+    // acilisinda Setup()'i yeniden cagirdigi icin bu artik kendi kendini onaran bir desen.
 
+/// <summary>Satiri doldurur VE tiklama olayini (yeniden) baglar. Guvenle tekrar tekrar
+    /// cagrilabilir - RemoveAllListeners ile eski baglanti temizlenip yenisi eklenir.
+    /// CharacterSelectUI.OnEnable her panel acilisinda bunu tum satirlar icin tekrar cagirir
+    /// (bkz. o sinifin yorumu - kirilgan Awake-zamanli cift-init zincirinin yerini aldi).</summary>
     public void Setup(int index, string characterName, string statSummary, Action<int> selectCallback)
     {
         characterIndex = index;
         onSelect = selectCallback;
         if (nameText != null) nameText.text = characterName;
         if (statText != null) statText.text = statSummary;
+
+        if (selectButton != null)
+        {
+            selectButton.onClick.RemoveAllListeners();
+            selectButton.onClick.AddListener(HandleSelectClicked);
+        }
     }
 
     /// <summary>occupantLabel bos ise "Boş" gosterilir. isMine=true ise buton "Seçildi" olur ve

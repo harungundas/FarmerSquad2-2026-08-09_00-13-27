@@ -18,6 +18,13 @@ using TMPro;
 /// alanı private (T30, değiştirilmedi). Bunun yerine HUDController kendi public QuotaData
 /// alanına (Inspector'dan AYNI QuotaData asset'i bağlanır: Assets/Data/Economy/QuotaData.asset)
 /// doğrudan bakıp "bugüne eşit veya sonraki ilk kota günü" mantığıyla hedefi hesaplar.
+///
+/// BUG FIX (kullanıcı raporu: "HUD'lar lobideki UI'ların üstüne çıkıyor"): HUDCanvas'ın
+/// TopLeftPanel/BottomLeftPanel/TopRightPanel'i öteden beri hep aktifti, hiçbir gizleme mantığı
+/// yoktu - bu yüzden MainMenu/Lobby ekranlarının üstüne çiziliyordu. Diğer ekranlarla (LobbyUI,
+/// WinScreenController, LoseScreenController, MarketUI) AYNI Show()/Hide() deseni eklendi.
+/// Gerçek oyun başlama akışı (T48/T49) henüz yok, bu yüzden Awake()'te varsayılan olarak
+/// Hide() çağrılır - HUD, oyun gerçekten başladığında (ileride) Show() ile açılacak.
 /// </summary>
 public class HUDController : MonoBehaviour
 {
@@ -44,6 +51,10 @@ public class HUDController : MonoBehaviour
     [Tooltip("Opsiyonel: alertText'in arka plan paneli (panel_1.png). Atanmışsa gizleme/gösterme BUNUN uzerinden yapılır (metin + arka plan birlikte); atanmamışsa sadece alertText.gameObject kullanılır.")]
     public GameObject alertPanel;
 
+    [Header("Görünürlük (Bug fix: HUD paneli varsayılan olarak her zaman açıktı, Lobi/MainMenu gibi diğer ekranların üstüne çıkıyordu)")]
+    [Tooltip("Sol üst / sol alt / sağ üst panelleri - Show()/Hide() ile birlikte açılıp kapanır. AlertPanel BURAYA DAHİL DEĞİL, o kendi SetAlertVisible mantığını kullanmaya devam eder.")]
+    public GameObject[] hudPanels;
+
     /// <summary>
     /// Sahnede tek bir HUDController varsayılır (Faz 9). VehicleSpawner ve NegotiationManager
     /// gibi ağ scriptleri Inspector referansı yerine bu static Instance üzerinden ShowAlert
@@ -51,15 +62,14 @@ public class HUDController : MonoBehaviour
     /// </summary>
     public static HUDController Instance;
 
-
-private void Awake()
+    private void Awake()
     {
         Instance = this;
         SetAlertVisible(false);
+        Hide(); // Bug fix: sahne açılışında HUD'un Lobi/MainMenu üstüne çıkmasını engeller - gerçek oyun başlayınca (T48/T49 start-game akışında) Show() çağrılacak.
     }
 
-    
-private void OnEnable()
+    private void OnEnable()
     {
         if (walletManager != null)
         {
@@ -192,14 +202,34 @@ private void OnEnable()
         return best != -1 ? best : quotaData.quotas[quotaData.quotas.Length - 1].day;
     }
 
+    /// <summary>Gerçek oyun başladığında (T48/T49 start-game akışı) çağrılacak - HUD panellerini
+    /// gösterir. AlertPanel bunun dışında, kendi ShowAlert/HideAlert mantığıyla ayrı yönetilir.</summary>
+    public void Show()
+    {
+        if (hudPanels == null) return;
+        foreach (var panel in hudPanels)
+        {
+            if (panel != null) panel.SetActive(true);
+        }
+    }
 
+    /// <summary>Lobi/MainMenu/Market/Kazanma-Kaybetme ekranları açıkken HUD'un üstlerine
+    /// çıkmaması için çağrılır. Awake()'te varsayılan olarak çağrılır.</summary>
+    public void Hide()
+    {
+        if (hudPanels == null) return;
+        foreach (var panel in hudPanels)
+        {
+            if (panel != null) panel.SetActive(false);
+        }
+    }
 
     /// <summary>
     /// T37: Geçici bir uyarı mesajı gösterir, `duration` saniye sonra otomatik gizler.
     /// Coroutine/animasyon YOK (basit tutulmalı, TASKS.md T37 notu) - CancelInvoke+Invoke yeterli.
     /// alertText Inspector'dan bağlanmamışsa sessizce hiçbir şey yapmaz (Debug.LogWarning ile uyarır).
     /// </summary>
-public void ShowAlert(string message, float duration)
+    public void ShowAlert(string message, float duration)
     {
         if (alertText == null)
         {
@@ -213,7 +243,7 @@ public void ShowAlert(string message, float duration)
         Invoke(nameof(HideAlert), duration);
     }
 
-private void HideAlert()
+    private void HideAlert()
     {
         SetAlertVisible(false);
     }

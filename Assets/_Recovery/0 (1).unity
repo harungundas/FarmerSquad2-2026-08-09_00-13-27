@@ -474,7 +474,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1821759071
+  GlobalObjectIdHash: 2834073063
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -612,7 +612,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -620,15 +620,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -672,11 +672,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 175
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -438.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -809,7 +809,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -817,15 +817,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -869,11 +869,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 312
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -57.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1346,9 +1346,9 @@ RectTransform:
   - {fileID: 938433853}
   m_Father: {fileID: 407056270}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 293.12003, y: -50}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &95359431
@@ -1536,7 +1536,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 16999710
+  GlobalObjectIdHash: 2574177352
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -3083,7 +3083,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1157103202
+  GlobalObjectIdHash: 1805884906
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -3386,7 +3386,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3969366287
+  GlobalObjectIdHash: 1970636677
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -3956,9 +3956,9 @@ RectTransform:
   - {fileID: 1736618188}
   m_Father: {fileID: 407056270}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 779.3601, y: -50}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &213371054
@@ -4296,7 +4296,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -4304,15 +4304,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -4356,11 +4356,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 38
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -311.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -4421,7 +4421,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.x
@@ -4429,15 +4429,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 224
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 135.94745
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalPosition.x
@@ -4469,11 +4469,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 1040
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -67.973724
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -5033,7 +5033,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 978288876770481855, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}
       propertyPath: GlobalObjectIdHash
-      value: 1406514051
+      value: 17850265
       objectReference: {fileID: 0}
     - target: {fileID: 978288876770481855, guid: 6b0b0b098177a3b439c80991ec9deacc, type: 3}
       propertyPath: SceneMigrationSynchronization
@@ -5403,7 +5403,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 818472239
+  GlobalObjectIdHash: 2545267237
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -5677,7 +5677,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -5685,15 +5685,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -5737,11 +5737,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 312
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -438.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -6465,7 +6465,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3152756329
+  GlobalObjectIdHash: 3730305542
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -6935,7 +6935,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -6943,15 +6943,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -6995,11 +6995,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 175
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -57.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -7884,7 +7884,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1323413076785965341, guid: 3edcf70af3303894482eb673a57b1198, type: 3}
       propertyPath: GlobalObjectIdHash
-      value: 2719539529
+      value: 2213537800
       objectReference: {fileID: 0}
     - target: {fileID: 1323413076785965341, guid: 3edcf70af3303894482eb673a57b1198, type: 3}
       propertyPath: SceneMigrationSynchronization
@@ -9621,7 +9621,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1964780844
+  GlobalObjectIdHash: 730586905
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -10262,7 +10262,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3411116193
+  GlobalObjectIdHash: 1113364599
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -11278,7 +11278,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.x
@@ -11286,15 +11286,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 224
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 135.94745
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalPosition.x
@@ -11326,11 +11326,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 344
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -67.973724
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -11382,7 +11382,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2595502533
+  GlobalObjectIdHash: 2093299060
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -11874,7 +11874,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -11882,15 +11882,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -11934,11 +11934,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 312
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -184.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -12649,7 +12649,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2508297787
+  GlobalObjectIdHash: 2652905093
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -12821,7 +12821,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3273447196
+  GlobalObjectIdHash: 741969790
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -13642,7 +13642,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1583298619
+  GlobalObjectIdHash: 54575050
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -13939,7 +13939,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -13947,15 +13947,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -13999,11 +13999,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 175
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -311.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -14365,7 +14365,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3583970586
+  GlobalObjectIdHash: 1901996192
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -14620,7 +14620,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -14628,15 +14628,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -14680,11 +14680,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 38
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -438.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -15484,7 +15484,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -15492,15 +15492,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -15544,11 +15544,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 38
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -184.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -15876,7 +15876,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8864793445104432261, guid: dfb23d60f30c46847ba7815aa09e2567, type: 3}
       propertyPath: GlobalObjectIdHash
-      value: 3954744159
+      value: 3315532980
       objectReference: {fileID: 0}
     - target: {fileID: 8864793445104432261, guid: dfb23d60f30c46847ba7815aa09e2567, type: 3}
       propertyPath: SceneMigrationSynchronization
@@ -16109,9 +16109,9 @@ RectTransform:
   - {fileID: 1332935225}
   m_Father: {fileID: 407056270}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 536.24005, y: -50}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1167698350
@@ -17152,7 +17152,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1517674659
+  GlobalObjectIdHash: 2628682551
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -18298,7 +18298,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -18306,15 +18306,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -18358,11 +18358,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 175
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -184.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -18522,7 +18522,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3561174952
+  GlobalObjectIdHash: 3906146813
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -19358,9 +19358,9 @@ RectTransform:
   - {fileID: 1565821043}
   m_Father: {fileID: 407056270}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -50}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1435016895
@@ -20595,7 +20595,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3523984019
+  GlobalObjectIdHash: 3564575535
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -21879,7 +21879,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3116113842
+  GlobalObjectIdHash: 1103751671
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -23028,7 +23028,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8525355236511061477, guid: d4d6ee78313566d4fb5c9a6ce2e66e80, type: 3}
       propertyPath: GlobalObjectIdHash
-      value: 3709605200
+      value: 3388597456
       objectReference: {fileID: 0}
     - target: {fileID: 8525355236511061477, guid: d4d6ee78313566d4fb5c9a6ce2e66e80, type: 3}
       propertyPath: SceneMigrationSynchronization
@@ -23077,7 +23077,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -23085,15 +23085,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -23137,11 +23137,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 38
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -57.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -23635,7 +23635,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 431616347
+  GlobalObjectIdHash: 2375097010
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -23831,7 +23831,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 783348975
+  GlobalObjectIdHash: 2972248833
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -24206,7 +24206,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.x
@@ -24214,15 +24214,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 224
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 135.94745
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalPosition.x
@@ -24254,11 +24254,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 576
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -67.973724
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -25314,7 +25314,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.x
@@ -25322,15 +25322,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 224
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 135.94745
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalScale.x
@@ -25374,11 +25374,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 112
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -67.973724
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -25999,7 +25999,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1738842435
+  GlobalObjectIdHash: 2934226028
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -26212,9 +26212,9 @@ RectTransform:
   - {fileID: 1064275256}
   m_Father: {fileID: 407056270}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1022.4801, y: -50}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1946100691
@@ -26293,7 +26293,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.x
@@ -26301,15 +26301,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 224
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 135.94745
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalPosition.x
@@ -26341,11 +26341,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 808
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -67.973724
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8335698631609814283, guid: 665d8bbd7df08864c9c6271fadfc49ae, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -26948,7 +26948,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.x
@@ -26956,15 +26956,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 125
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 115
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalScale.x
@@ -27008,11 +27008,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 312
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -311.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5938196055625598368, guid: bb0181ece6a446a4e98cd77d7f2ab1a0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -27619,7 +27619,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8477064042084149224, guid: 8345925ae6d2348499145ff1db66ed0a, type: 3}
       propertyPath: GlobalObjectIdHash
-      value: 2781712018
+      value: 1538477769
       objectReference: {fileID: 0}
     - target: {fileID: 8477064042084149224, guid: 8345925ae6d2348499145ff1db66ed0a, type: 3}
       propertyPath: SceneMigrationSynchronization

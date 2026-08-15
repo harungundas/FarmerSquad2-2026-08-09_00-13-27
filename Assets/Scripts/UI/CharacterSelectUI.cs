@@ -3,17 +3,16 @@ using UnityEngine;
 
 /// <summary>
 /// Karakter secim UI'i (ARCHITECTURE.md "## Karakter Seçim UI", TASKS.md T43).
-/// KULLANICI KARARI (bu HANDOFF/sohbette netlestirildi): ayri bir tam-ekran ekran DEGIL,
-/// Lobi ekraninin (LobbyCanvas/Panel) İÇİNE gomulu bir panel - boylece lobideki herkes
-/// birbirinin ne sectigini canli gorebilir.
+/// Lobi ekraninin (LobbyCanvas/Panel) İÇİNE gomulu bir panel - lobideki herkes birbirinin ne
+/// sectigini canli gorebilir.
 ///
-/// 5 sabit satir (Yetiskin/Sisman/Cocuk/Kadin/Yasli - CharacterSelectionManager'daki slot
-/// sirasiyla AYNI), her biri CharacterClassData'dan okunan kisa bir stat ozeti gosterir.
-/// CharacterSelectionManager'in 5 NetworkVariable'ina abone olup canli guncellenir.
+/// 5 sabit satir (Yetiskin/Sisman/Cocuk/Kadin/Yasli). GUNCEL KURAL (kullanici karari): ayni
+/// karakteri BIRDEN FAZLA oyuncu secebilir - bu yuzden bir satirin "sahibi" tekil degil, bir
+/// LISTE'dir (CharacterSelectionManager.GetOwnersOfCharacter). Satir hicbir zaman kilitlenmez
+/// (baskasi secmis olsa da tiklanabilir kalir).
 ///
-/// GELECEK POLISH FIKRI (kullanici notu, bu gorevin kapsami DEGIL): Karakterlerin 3D
-/// modellerinin PUBG tarzi bir onizleme kamerasi/RenderTexture ile lobide gorunmesi -
-/// ayri bir kamera + RenderTexture kurulumu gerektirir, ileride ele alinabilir.
+/// CharacterSelectionManager'in 10 NetworkVariable'ina (5 slot sahibi + 5 slot karakteri) abone
+/// olup herhangi biri degisince tum satirlari yeniden hesaplar (5 satir icin ucuz islem).
 /// </summary>
 public class CharacterSelectUI : MonoBehaviour
 {
@@ -27,19 +26,18 @@ public class CharacterSelectUI : MonoBehaviour
 
     private bool subscribed;
 
-    private void Awake()
+    /// <summary>Satir wiring'i burada (Awake DEGIL) - bkz. T43 HANDOFF notu: Awake-zamanli
+    /// wiring'in onSelect callback'ini NULL biraktigi gozlemlenmisti. OnEnable panel her
+    /// acildiginda (LobbyUI.Show() ile) yeniden calisir, Setup() idempotent.</summary>
+    private void OnEnable()
     {
         for (int i = 0; i < rows.Length; i++)
         {
             if (rows[i] == null) continue;
-            int captured = i;
             string stat = BuildStatSummary(i);
             rows[i].Setup(i, characterDisplayNames[i], stat, OnSelectClicked);
         }
-    }
 
-    private void OnEnable()
-    {
         TrySubscribe();
         RefreshAllRows();
     }
@@ -51,8 +49,8 @@ public class CharacterSelectUI : MonoBehaviour
 
     private void Update()
     {
-        // NetworkManager/selectionManager gec spawn olabilir (host baslatilmadan once panel
-        // acilmis olabilir) - abone degilsek her frame denemek ucuz ve basit bir cozum.
+        // NetworkManager/selectionManager gec spawn olabilir - abone degilsek her frame denemek
+        // ucuz ve basit bir cozum.
         if (!subscribed) TrySubscribe();
     }
 
@@ -66,11 +64,19 @@ public class CharacterSelectUI : MonoBehaviour
     private void TrySubscribe()
     {
         if (subscribed || selectionManager == null) return;
-        selectionManager.Slot0Owner.OnValueChanged += (a, b) => RefreshRow(0);
-        selectionManager.Slot1Owner.OnValueChanged += (a, b) => RefreshRow(1);
-        selectionManager.Slot2Owner.OnValueChanged += (a, b) => RefreshRow(2);
-        selectionManager.Slot3Owner.OnValueChanged += (a, b) => RefreshRow(3);
-        selectionManager.Slot4Owner.OnValueChanged += (a, b) => RefreshRow(4);
+
+        selectionManager.Slot0Owner.OnValueChanged += OnAnySlotOwnerChanged;
+        selectionManager.Slot1Owner.OnValueChanged += OnAnySlotOwnerChanged;
+        selectionManager.Slot2Owner.OnValueChanged += OnAnySlotOwnerChanged;
+        selectionManager.Slot3Owner.OnValueChanged += OnAnySlotOwnerChanged;
+        selectionManager.Slot4Owner.OnValueChanged += OnAnySlotOwnerChanged;
+
+        selectionManager.Slot0Character.OnValueChanged += OnAnySlotCharacterChanged;
+        selectionManager.Slot1Character.OnValueChanged += OnAnySlotCharacterChanged;
+        selectionManager.Slot2Character.OnValueChanged += OnAnySlotCharacterChanged;
+        selectionManager.Slot3Character.OnValueChanged += OnAnySlotCharacterChanged;
+        selectionManager.Slot4Character.OnValueChanged += OnAnySlotCharacterChanged;
+
         subscribed = true;
     }
 
@@ -81,26 +87,44 @@ public class CharacterSelectUI : MonoBehaviour
         subscribed = false;
     }
 
+    private void OnAnySlotOwnerChanged(ulong a, ulong b) => RefreshAllRows();
+    private void OnAnySlotCharacterChanged(int a, int b) => RefreshAllRows();
+
     public void RefreshAllRows()
     {
         for (int i = 0; i < rows.Length; i++) RefreshRow(i);
     }
 
+    /// <summary>index burada bir KARAKTER TIPI (satir), atama slotu DEGIL. Bu karakteri secmis
+    /// olan tum oyunculari (0, 1 veya daha fazla) listeler.</summary>
     private void RefreshRow(int index)
     {
         if (index < 0 || index >= rows.Length || rows[index] == null) return;
 
-        ulong ownerId = selectionManager != null ? selectionManager.GetOwnerOf(index) : CharacterSelectionManager.NoOwner;
-        bool taken = ownerId != CharacterSelectionManager.NoOwner;
-        bool isMine = taken && NetworkManager.Singleton != null && ownerId == NetworkManager.Singleton.LocalClientId;
-
-        string label = "";
-        if (taken)
+        if (selectionManager == null)
         {
-            label = isMine ? "Sen" : ("Oyuncu " + ownerId);
+            rows[index].SetOccupant("", false, false);
+            return;
         }
 
-        rows[index].SetOccupant(label, isMine, taken && !isMine);
+        var owners = selectionManager.GetOwnersOfCharacter(index);
+        ulong localId = NetworkManager.Singleton != null ? NetworkManager.Singleton.LocalClientId : CharacterSelectionManager.NoOwner;
+        bool isMine = owners.Contains(localId);
+
+        string label = "";
+        if (owners.Count > 0)
+        {
+            var names = new System.Collections.Generic.List<string>(owners.Count);
+            foreach (var ownerId in owners)
+            {
+                names.Add(ownerId == localId ? "Sen" : ("Oyuncu " + ownerId));
+            }
+            label = string.Join(", ", names);
+        }
+
+        // isTakenByOther HER ZAMAN false: ayni karakter birden fazla oyuncu tarafindan
+        // secilebildigi icin baskasinin secmis olmasi butonu kilitlemez.
+        rows[index].SetOccupant(label, isMine, false);
     }
 
     private void OnSelectClicked(int index)

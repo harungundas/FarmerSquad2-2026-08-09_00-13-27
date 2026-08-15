@@ -32,6 +32,13 @@ public class DayCycleManager : NetworkBehaviour
     [Tooltip("Kota basarisizsa acilir. T39'da doldurulacak stub (Assets/Scripts/UI/LoseScreenController.cs).")]
     public LoseScreenController loseScreenController;
 
+    [Header("T38: Kazanma Baglantilari")]
+    [Tooltip("Gun 18 (final kota) basariyla gecilince acilir (Assets/Scripts/UI/WinScreenController.cs).")]
+    public WinScreenController winScreenController;
+    [Tooltip("WinScreenController.Show()'a gecirilen istatistik kaynagi (Assets/Scripts/Economy/GameStatsTracker.cs).")]
+    public GameStatsTracker gameStatsTracker;
+
+
     [Header("T35: Prestij Baglantisi")]
     [Tooltip("Gun basinda bekleyen bonus arac havuzunu tuketmek icin (ConsumeBonusServer).")]
     public PrestigeManager prestigeManager;
@@ -206,7 +213,7 @@ private void StartDayServer(int day)
     /// ARCHITECTURE.md "## 4. Veri Akisi": QuotaManager kontrolu -> basariliysa MarketManager ac ->
     /// sonraki gune gec; basarisizsa LoseScreenController tetikle (sonraki gune GECILMEZ).
     /// </summary>
-    public void CompleteDayServer()
+public void CompleteDayServer()
     {
         if (!IsServer)
         {
@@ -238,6 +245,26 @@ private void StartDayServer(int day)
             else
             {
                 Debug.LogWarning("[DayCycleManager] loseScreenController atanmamis (T39 henuz yok) - Iflas ekrani gosterilemedi.");
+            }
+
+            return;
+        }
+
+        // T38: Gun 18 (QuotaData'daki SON kota gunu) basariyla gecildiyse oyun KAZANILIR -
+        // MarketManager ACILMAZ (bir sonraki gun yok, GDD Bolum 5: "Sonrasinda: Skor Tablosu
+        // ekrani -> New Game+ veya Ana Menu"). Onceden burada bu ayrim YOKTU, her basarili gun
+        // (Gun 18 dahil) koşulsuz MarketManager.OpenMarket() cagiriyordu - bkz. HANDOFF.md T38 notu.
+        if (quotaManager.IsFinalQuotaDay(dayJustFinished))
+        {
+            Debug.Log("[DayCycleManager] Gun " + dayJustFinished + " (FINAL kota) basarili! Oyun KAZANILDI.");
+
+            if (winScreenController != null)
+            {
+                winScreenController.Show(gameStatsTracker);
+            }
+            else
+            {
+                Debug.LogWarning("[DayCycleManager] winScreenController atanmamis (T38) - Basari ekrani gosterilemedi.");
             }
 
             return;

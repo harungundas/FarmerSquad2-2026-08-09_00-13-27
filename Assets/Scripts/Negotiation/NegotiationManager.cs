@@ -48,6 +48,9 @@ public class NegotiationManager : NetworkBehaviour
     public WalletManager walletManager;
     [Tooltip("T35: Satis teslimat sonucu (basarili/hatali) buraya bildirilir. Alim sinyal GONDERMEZ - bkz. PrestigeManager.cs sinif yorumu.")]
     public PrestigeManager prestigeManager;
+    [Tooltip("T38: Satis/Alim/pazarlik istatistikleri buraya raporlanir (WinScreenController icin).")]
+    public GameStatsTracker gameStatsTracker;
+
 
     [Header("Hayvan Veritabani (T28 - Alim siparisinde dogru prefabi spawn etmek icin)")]
     [Tooltip("5 turun tamami icin AnimalData referanslarini (T04'teki asset'ler) buraya elle surukle.")]
@@ -115,7 +118,7 @@ public class NegotiationManager : NetworkBehaviour
 
     /// <summary>Oyuncu pazarliksiz, base fiyata dogrudan [Kabul Et] der - risk/bonus YOK. Fiyat kilitlenir, teslimat BEKLENIR (AwaitingDelivery, sadece Satis'ta).</summary>
     [ServerRpc(RequireOwnership = false)]
-    public void RequestAcceptBaseServerRpc(ServerRpcParams rpcParams = default)
+public void RequestAcceptBaseServerRpc(ServerRpcParams rpcParams = default)
     {
         if (!IsValidCaller(rpcParams, NegotiationStage.Offered)) return;
 
@@ -127,6 +130,7 @@ public class NegotiationManager : NetworkBehaviour
         {
             SpawnAlimAnimals(s);
             ProcessPayment(s);
+            if (gameStatsTracker != null) gameStatsTracker.ReportPurchaseServer(s.finalOffer);
             s.stage = NegotiationStage.Resolved;
             s.resolved = true;
             s.deliverySuccess = true;
@@ -158,7 +162,7 @@ public class NegotiationManager : NetworkBehaviour
     /// sunar. Once "absurd" kontrolu, sonra normal reddetme riski atisi yapilir.
     /// </summary>
     [ServerRpc(RequireOwnership = false)]
-    public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams rpcParams = default)
+public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams rpcParams = default)
     {
         if (!IsValidCaller(rpcParams, NegotiationStage.Offered)) return;
 
@@ -181,6 +185,11 @@ public class NegotiationManager : NetworkBehaviour
 
         float rejectRisk = CalculateRejectRiskPercent(s.negotiatingClientId);
         bool rejected = Random.Range(0f, 100f) < rejectRisk;
+
+        // T38: Absurd olmayan HER gercek risk atisi bir pazarlik "denemesi" sayilir - rejected
+        // false ise basarili (musteri counter'i kabul etti demek degil, sadece REDDETMEDI -
+        // WinScreen'deki "Pazarlik Basarisi" GDD Bolum 10.7'deki anlamiyla budur).
+        if (gameStatsTracker != null) gameStatsTracker.ReportNegotiationAttemptServer(!rejected);
 
         if (rejected)
         {
@@ -211,6 +220,7 @@ public class NegotiationManager : NetworkBehaviour
         {
             SpawnAlimAnimals(s);
             ProcessPayment(s);
+            if (gameStatsTracker != null) gameStatsTracker.ReportPurchaseServer(s.finalOffer);
             s.stage = NegotiationStage.Resolved;
             s.resolved = true;
             s.deliverySuccess = true;
@@ -273,13 +283,14 @@ public class NegotiationManager : NetworkBehaviour
         if (success)
         {
             ProcessPayment(s);
+            if (gameStatsTracker != null) gameStatsTracker.ReportSaleServer(s.count, s.finalOffer);
             Debug.Log("[NegotiationManager] Dogru teslimat! " + s.count + "x " + s.species + " (" + s.direction + ") " + s.finalOffer + "$ WalletManager'a islendi.");
         }
         else
         {
+            if (gameStatsTracker != null) gameStatsTracker.ReportWrongDeliveryServer();
             Debug.Log("[NegotiationManager] Yanlis/eksik teslimat! Beklenen " + s.count + "x " + s.species + " - para hareketi yok.");
             NotifyWrongDeliveryClientRpc();
-
         }
 
         if (prestigeManager != null)

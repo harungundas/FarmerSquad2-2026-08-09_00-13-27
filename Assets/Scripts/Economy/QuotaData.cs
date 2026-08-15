@@ -27,8 +27,6 @@ public class QuotaData : ScriptableObject
         new QuotaEntry { day = 18, requiredAmount = 700f },
     };
 
-
-
     /// <summary>
     /// Verilen gun icin kota tanimli mi, varsa gerekli tutari doldurur.
     /// </summary>
@@ -45,5 +43,17 @@ public class QuotaData : ScriptableObject
 
         requiredAmount = 0f;
         return false;
+    }
+
+    /// <summary>
+    /// T38: Verilen gun, tanimli kotalar arasindaki SON (en buyuk day degerine sahip) kota mi?
+    /// DayCycleManager bunu Gun 18 (final kota) basarisinda WinScreenController.Show() cagirmak
+    /// icin kullanir - gun sayisini burada SABITLEMEK yerine quotas dizisinin son elemanina
+    /// bakar, boylece kota tablosu degisirse (Design Change) tek yerden guncellenir.
+    /// </summary>
+    public bool IsFinalDay(int day)
+    {
+        if (quotas == null || quotas.Length == 0) return false;
+        return quotas[quotas.Length - 1].day == day;
     }
 }

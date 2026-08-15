@@ -29,6 +29,13 @@ public class QuotaManager : NetworkBehaviour
         }
     }
 
+    /// <summary>T38: DayCycleManager'in Gun 18 (final kota) sonrasi WinScreenController.Show()
+    /// cagirip cagirmayacagina karar vermesi icin - quotaData'ya (private field) buradan erisilir.</summary>
+    public bool IsFinalQuotaDay(int day)
+    {
+        return quotaData != null && quotaData.IsFinalDay(day);
+    }
+
     [ServerRpc(RequireOwnership = false)]
     public void CheckQuotaServerRpc(int day)
     {

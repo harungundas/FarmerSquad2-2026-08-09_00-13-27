@@ -2580,6 +2580,7 @@ GameObject:
   - component: {fileID: 5570069471746826107}
   - component: {fileID: 1020122251812481633}
   - component: {fileID: 664155009113113436}
+  - component: {fileID: 4554239175770383049}
   m_Layer: 0
   m_Name: SK_Goat_white
   m_TagString: Untagged
@@ -2705,6 +2706,23 @@ MonoBehaviour:
   hungerDecayRate: 1
   underfedSellMultiplier: 0.6
   isUnderfed: 0
+--- !u!114 &4554239175770383049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6885452974112614176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17f7306571adae14ebe5c9c7740cfc0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimalIdleWander
+  ShowTopMostFoldoutHeaderGroup: 1
+  minWaitSeconds: 8
+  maxWaitSeconds: 15
+  minMoveSpeed: 0.3
+  maxMoveSpeed: 0.5
 --- !u!1 &6885452974152113413
 GameObject:
   m_ObjectHideFlags: 0

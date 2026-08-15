@@ -1839,6 +1839,7 @@ GameObject:
   - component: {fileID: 7607961302688271486}
   - component: {fileID: 8869340480733412091}
   - component: {fileID: 5767338296060809598}
+  - component: {fileID: 5515080064495891225}
   m_Layer: 0
   m_Name: SK_Sheep_cream
   m_TagString: Untagged
@@ -1985,6 +1986,23 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.459, y: 1.3899, z: 1.5856}
   m_Center: {x: 0.0013, y: 0.6377, z: 0.1878}
+--- !u!114 &5515080064495891225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1868461998570734802}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17f7306571adae14ebe5c9c7740cfc0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimalIdleWander
+  ShowTopMostFoldoutHeaderGroup: 1
+  minWaitSeconds: 8
+  maxWaitSeconds: 15
+  minMoveSpeed: 0.3
+  maxMoveSpeed: 0.5
 --- !u!1 &1868461998597306862
 GameObject:
   m_ObjectHideFlags: 0

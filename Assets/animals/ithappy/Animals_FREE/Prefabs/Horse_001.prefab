@@ -656,6 +656,7 @@ GameObject:
   - component: {fileID: 9207567914833343168}
   - component: {fileID: 8864793445104432261}
   - component: {fileID: 8806639329013416785}
+  - component: {fileID: 6352011173156786272}
   m_Layer: 0
   m_Name: Horse_001
   m_TagString: Untagged
@@ -829,6 +830,23 @@ MonoBehaviour:
   hungerDecayRate: 1
   underfedSellMultiplier: 0.6
   isUnderfed: 0
+--- !u!114 &6352011173156786272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3851015956068934394}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17f7306571adae14ebe5c9c7740cfc0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimalIdleWander
+  ShowTopMostFoldoutHeaderGroup: 1
+  minWaitSeconds: 8
+  maxWaitSeconds: 15
+  minMoveSpeed: 0.3
+  maxMoveSpeed: 0.5
 --- !u!1 &3955406351709833468
 GameObject:
   m_ObjectHideFlags: 0

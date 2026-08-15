@@ -3362,6 +3362,7 @@ GameObject:
   - component: {fileID: 8878472432395500085}
   - component: {fileID: 5294526002481297688}
   - component: {fileID: 5971078845332846297}
+  - component: {fileID: 6911158468878508420}
   m_Layer: 0
   m_Name: SK_Sheep_dark
   m_TagString: Untagged
@@ -3487,6 +3488,23 @@ MonoBehaviour:
   hungerDecayRate: 1
   underfedSellMultiplier: 0.6
   isUnderfed: 0
+--- !u!114 &6911158468878508420
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4803590418286029818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17f7306571adae14ebe5c9c7740cfc0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnimalIdleWander
+  ShowTopMostFoldoutHeaderGroup: 1
+  minWaitSeconds: 8
+  maxWaitSeconds: 15
+  minMoveSpeed: 0.3
+  maxMoveSpeed: 0.5
 --- !u!1 &4803590418325253606
 GameObject:
   m_ObjectHideFlags: 0

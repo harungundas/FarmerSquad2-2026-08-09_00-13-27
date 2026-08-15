@@ -59,6 +59,13 @@ public class LobbyUI : MonoBehaviour
     private bool isSelectionLocked = false;
     private bool isReady = false;
 
+    [Header("T47 - Lobi Countdown (DayCycleManager'in 240sn gun-ici sayacindan TAMAMEN AYRI)")]
+    private const int CountdownStartSeconds = 15;
+    private int countdownSecondsRemaining = CountdownStartSeconds;
+    private bool isCountdownRunning = false;
+    private Coroutine countdownCoroutine;
+
+
 
     private void Awake()
     {
@@ -188,9 +195,10 @@ public class LobbyUI : MonoBehaviour
     }
 
 
-    /// <summary>T46 kapsaminda sadece local-only kilit toggle'i. Gercek "herkes ready mi"
-    /// kontrolu, countdown baslatma ve renk/metin polish'i T47'de eklenecek - burada sadece
-    /// SetCharacterSelectionLocked baglantisini kurup buton metnini degistiriyoruz.</summary>
+        /// <summary>T46'da kurulan local toggle + kilit baglantisinin uzerine T47'de countdown
+    /// eklendi. Ready -> "Hazir" (isReady=false) durumundan "Hazir Degil" durumuna gecince
+    /// (isReady=true) countdown baslar; "Hazir Degil" basinca (isReady=false donerken)
+    /// countdown iptal/sifirlanir.</summary>
     private void OnReadyClicked()
     {
         isReady = !isReady;
@@ -198,7 +206,81 @@ public class LobbyUI : MonoBehaviour
 
         if (readyButtonText != null) readyButtonText.text = isReady ? "Hazir Degil" : "Hazir";
 
-        Debug.Log("[LobbyUI] Ready durumu: " + (isReady ? "HAZIR (secim kilitli)" : "HAZIR DEGIL (secim acik)") + " (T47'de countdown eklenecek).");
+        if (isReady)
+        {
+            StartCountdownIfAllReady();
+        }
+        else
+        {
+            ResetCountdown();
+        }
+
+        Debug.Log("[LobbyUI] Ready durumu: " + (isReady ? "HAZIR (secim kilitli)" : "HAZIR DEGIL (secim acik)") + ".");
+    }
+
+    /// <summary>T47: Session 1'de gercek network yok, bu yuzden "herkes ready mi" kontrolu
+    /// hardcoded/basitlestirilmis: local oyuncu (Oyuncu 1) Ready basinca, diger 4 sahte
+    /// oyuncunun da (Oyuncu 2-5) zaten hazir oldugu varsayilir ve countdown direkt baslar.
+    /// Gercek "X oyuncu hazir degil" sayimi ve Force Start Modal T48'de eklenecek - o gorev
+    /// bu varsayimi degistirebilir, simdilik TASKS.md T47 Test kriterine ("Ready basinca
+    /// timer baslar") gore tek kosul isReady==true.</summary>
+    private void StartCountdownIfAllReady()
+    {
+        if (isCountdownRunning) return;
+
+        countdownSecondsRemaining = CountdownStartSeconds;
+        isCountdownRunning = true;
+        UpdateCountdownDisplay();
+
+        if (countdownCoroutine != null) StopCoroutine(countdownCoroutine);
+        countdownCoroutine = StartCoroutine(CountdownRoutine());
+    }
+
+    private System.Collections.IEnumerator CountdownRoutine()
+    {
+        while (countdownSecondsRemaining > 0)
+        {
+            yield return new WaitForSeconds(1f);
+            if (!isCountdownRunning) yield break; // ResetCountdown tarafindan iptal edildi
+            countdownSecondsRemaining--;
+            UpdateCountdownDisplay();
+        }
+
+        if (!isCountdownRunning) yield break;
+
+        if (countdownText != null) countdownText.text = "Oyun Basliyor";
+        Debug.Log("[LobbyUI] Countdown tamamlandi - Oyun Basliyor.");
+
+        yield return new WaitForSeconds(2f);
+        if (!isCountdownRunning) yield break;
+
+        isCountdownRunning = false;
+        countdownCoroutine = null;
+        // NOT: Gercek scene gecisi (SceneManager.LoadScene) T48/T50'de eklenecek.
+        // T47 kapsami sadece UI/timer oldugu icin burada placeholder log birakiliyor.
+        Debug.Log("[LobbyUI] (Placeholder) Game scene'e gecis burada tetiklenecek (T48/T50).");
+    }
+
+    /// <summary>T47: Countdown metnini gunceller ("15","14",...,"0").</summary>
+    private void UpdateCountdownDisplay()
+    {
+        if (countdownText != null) countdownText.text = countdownSecondsRemaining.ToString();
+    }
+
+    /// <summary>T47: Countdown iptal/sifirlama. "Hazir Degil" basilinca cagirilir - coroutine'i
+    /// durdurur, sayaci sifirlar, countdownText'i "-" yapar. NOT: DayCycleManager'in 240sn
+    /// gun-ici sayaciyla KARISTIRILMAMALI, bu tamamen ayri bir lobi-ici sistemdir.</summary>
+    private void ResetCountdown()
+    {
+        isCountdownRunning = false;
+        if (countdownCoroutine != null)
+        {
+            StopCoroutine(countdownCoroutine);
+            countdownCoroutine = null;
+        }
+        countdownSecondsRemaining = CountdownStartSeconds;
+        if (countdownText != null) countdownText.text = "-";
+        Debug.Log("[LobbyUI] Countdown sifirlandi.");
     }
 
     private void OnStartGameClicked()

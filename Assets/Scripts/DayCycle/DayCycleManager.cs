@@ -17,6 +17,11 @@ using Unity.Netcode;
 [RequireComponent(typeof(NetworkObject))]
 public class DayCycleManager : NetworkBehaviour
 {
+
+
+
+
+
     [Header("Musteri Gelis Penceresi (GDD Bolum 5: 240sn kurali)")]
     public float customerWindowSeconds = 240f;
 
@@ -81,9 +86,19 @@ public class DayCycleManager : NetworkBehaviour
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server);
 
-    public override void OnNetworkSpawn()
+public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
+
+        // Lobi->Oyun geçişinde state reset: önceki run'dan kalan CurrentDay > 1 ise reset et
+        if (IsServer && CurrentDay.Value > 1)
+        {
+            Debug.Log("[DayCycleManager.OnNetworkSpawn] Scene reload tespit edildi. State sıfırlanıyor.");
+            CurrentDay.Value = 1;
+            Timer.Value = 0f;
+            IsFreeMode.Value = false;
+            BonusVehiclesToday.Value = 0;
+        }
 
         IsFreeMode.OnValueChanged += OnFreeModeChanged;
 

@@ -45,6 +45,16 @@ public class LobbyUI : MonoBehaviour
     [Header("Ortada Sag - Countdown (mantik T47'de)")]
     public TextMeshProUGUI countdownText;
 
+    [Header("T48 - Force Start Modal (Start Game basinca hazir olmayan varsa acilir)")]
+    public GameObject forceStartModalPanel;
+    public TextMeshProUGUI forceStartModalText;
+    public Button forceStartConfirmButton; // Devam
+    public Button forceStartCancelButton;  // Geri
+
+    [Header("T48 - Simulated Not-Ready Count (Oturum 1, gercek network yok - Inspector'dan degistirilebilir test icin. 0 = herkes ready senaryosu)")]
+    public int simulatedNotReadyCount = 2;
+
+
     private int lobbyCode;
     private int selectedCharacterIndex = 0;
 
@@ -76,12 +86,13 @@ public class LobbyUI : MonoBehaviour
     /// <summary>MainMenuController.OnCreateLobbyClicked/OnJoinLobbyClicked sonrasi cagirir.
     /// Lobi kodunu (rakam-only, T50'de gercek host tarafinda ayni yontemle uretilecek) ve
     /// baslangic degerlerini ayarlar.</summary>
-    public void Show()
+public void Show()
     {
         if (panelRoot != null) panelRoot.SetActive(true);
         GenerateLobbyCode();
         UpdatePlaceholderSlots();
         SelectCharacter(0);
+        if (forceStartModalPanel != null) forceStartModalPanel.SetActive(false);
     }
 
     public void Hide()
@@ -109,11 +120,13 @@ public class LobbyUI : MonoBehaviour
         }
     }
 
-    private void WireButtons()
+private void WireButtons()
     {
         if (readyButton != null) readyButton.onClick.AddListener(OnReadyClicked);
         if (startGameButton != null) startGameButton.onClick.AddListener(OnStartGameClicked);
         if (leaveButton != null) leaveButton.onClick.AddListener(OnLeaveClicked);
+        if (forceStartConfirmButton != null) forceStartConfirmButton.onClick.AddListener(OnForceStartConfirmed);
+        if (forceStartCancelButton != null) forceStartCancelButton.onClick.AddListener(OnForceStartCancelled);
     }
 
         /// <summary>5 portre butonuna tiklama dinleyicisi baglar. Her buton kendi indexini
@@ -283,9 +296,46 @@ public class LobbyUI : MonoBehaviour
         Debug.Log("[LobbyUI] Countdown sifirlandi.");
     }
 
-    private void OnStartGameClicked()
+private void OnStartGameClicked()
     {
-        Debug.Log("[LobbyUI] Start Game tiklandi (T48'de force-start modal mantigi eklenecek).");
+        if (simulatedNotReadyCount > 0)
+        {
+            OpenForceStartModal();
+        }
+        else
+        {
+            Debug.Log("[LobbyUI] Start Game: herkes hazir, countdown modalsiz direkt basliyor.");
+            StartCountdownIfAllReady();
+        }
+    }
+
+    /// <summary>T48: Ready olmayan oyuncu varsa Start Game basilinca acilir. Metin, kac
+    /// oyuncunun hazir olmadigini dinamik gosterir (Oturum 1'de simulatedNotReadyCount'tan
+    /// okunur, gercek network T49/T50'de bu degeri gercek sayimla degistirecek).</summary>
+    private void OpenForceStartModal()
+    {
+        if (forceStartModalText != null)
+            forceStartModalText.text = simulatedNotReadyCount + " oyuncu hazir degil. Yine de baslat?";
+        if (forceStartModalPanel != null) forceStartModalPanel.SetActive(true);
+        Debug.Log("[LobbyUI] Force start modal acildi (" + simulatedNotReadyCount + " oyuncu hazir degil).");
+    }
+
+    /// <summary>T48: [Devam] basilinca cagirilir. Modali kapatir, countdown'u 15sn'ye
+    /// sifirlayip T47'nin StartCountdownIfAllReady() ile otomatik baslatir.</summary>
+    private void OnForceStartConfirmed()
+    {
+        if (forceStartModalPanel != null) forceStartModalPanel.SetActive(false);
+        ResetCountdown();
+        StartCountdownIfAllReady();
+        Debug.Log("[LobbyUI] Force start onaylandi (Devam), countdown 15sn'den basliyor.");
+    }
+
+    /// <summary>T48: [Geri] basilinca cagirilir. Modali kapatir, lobi beklemeye devam eder
+    /// (countdown'a dokunmaz).</summary>
+    private void OnForceStartCancelled()
+    {
+        if (forceStartModalPanel != null) forceStartModalPanel.SetActive(false);
+        Debug.Log("[LobbyUI] Force start iptal edildi (Geri), lobi beklemeye devam.");
     }
 
     private void OnLeaveClicked()

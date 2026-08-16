@@ -73,6 +73,10 @@ public class MainMenuController : MonoBehaviour
     [Header("Lobi (T41)")]
     [SerializeField] private LobbyUI lobbyUI;
 
+    [Header("Lobi Listesi (T50)")]
+    [SerializeField] private LobbyListUI lobbyListUI;
+
+
     [Header("Profil (T49)")]
     [SerializeField] private GameObject profilePanelRoot;
     [SerializeField] private TMPro.TMP_InputField usernameInputField;
@@ -103,6 +107,9 @@ public class MainMenuController : MonoBehaviour
     /// <summary>[Lobi Oluştur] (BlueBtn). GameNetworkManager.StartHost() cagirir (gercek Steam
     /// lobi kodu yok - bkz. sinif yorumu). Basarili baslatma sonrasi menu paneli kapanir ve
     /// LobbyUI acilir.</summary>
+/// <summary>[Lobi Oluştur] (BlueBtn). LobbySessionManager.CreateLobby() ile GERÇEK (hardcoded
+    /// olmayan) 4 haneli lobi kodu üretir (TASKS.md T50), sonra GameNetworkManager.StartHost()
+    /// çağırır. Menü paneli kapanır, LobbyUI üretilen gerçek kodla açılır.</summary>
     private void OnCreateLobbyClicked()
     {
         if (gameNetworkManager == null)
@@ -111,34 +118,39 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
+        LobbySessionManager.LobbyInfo info = LobbySessionManager.CreateLobby(CurrentUsername);
+
         gameNetworkManager.StartHost();
         if (panelRoot != null) panelRoot.SetActive(false);
-        ShowLobbyUI();
+        ShowLobbyUI(info.lobbyCode);
     }
 
     /// <summary>[Lobiye Katıl] (BlueBtn). GameNetworkManager.StartClient() cagirir - lobi kodu
     /// girisi YOK, NetworkManager'in Inspector'daki varsayilan UTP adresine baglanir (bkz. sinif
     /// yorumu). Basarili baslatma sonrasi menu paneli kapanir ve LobbyUI acilir.</summary>
+/// <summary>[Lobiye Katıl] (BlueBtn). T50 ONCESI dogrudan StartClient() cagiriyordu; ARTIK
+    /// LobbyListUI'yi acar (gercek ActiveLobbies verisiyle) - gercek katilim, secilen satira
+    /// tiklaninca LobbyListUI.OnLobbyRowClicked() icinde StartClient() ile tetiklenir.</summary>
     private void OnJoinLobbyClicked()
     {
-        if (gameNetworkManager == null)
+        if (lobbyListUI == null)
         {
-            Debug.LogError("[MainMenuController] gameNetworkManager atanmamis.");
+            Debug.LogError("[MainMenuController] lobbyListUI atanmamis.");
             return;
         }
 
-        gameNetworkManager.StartClient();
-        if (panelRoot != null) panelRoot.SetActive(false);
-        ShowLobbyUI();
+        lobbyListUI.Show();
     }
 
     /// <summary>lobbyUI atanmissa Show() cagirir; atanmamissa (henuz kurulmamis bir sahnede)
     /// sessizce stub log basar, hata firlatmaz.</summary>
-    private void ShowLobbyUI()
+/// <summary>lobbyUI atanmissa Show(code) cagirir (gercek lobi koduyla - T50); atanmamissa
+    /// (henuz kurulmamis bir sahnede) sessizce stub log basar, hata firlatmaz.</summary>
+    private void ShowLobbyUI(int lobbyCode)
     {
         if (lobbyUI != null)
         {
-            lobbyUI.Show();
+            lobbyUI.Show(lobbyCode);
         }
         else
         {

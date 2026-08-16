@@ -102,10 +102,40 @@ public override void OnNetworkSpawn()
 
         IsFreeMode.OnValueChanged += OnFreeModeChanged;
 
-        if (IsServer)
+        // BUG DUZELTMESI (kullanici raporu): StartDayServer() burada ARTIK cagrilmiyor.
+        // Onceden koşulsuzdu - NGO host StartHost() caginca sahnedeki bu NetworkObject'i
+        // otomatik spawn ediyor, yani [Lobi Olustur] tiklanir tiklanmaz oyuncu hala Lobi
+        // ekranindayken gun 1 sayaci arka planda basliyordu. Artik BeginGameServer()
+        // disaridan (LobbyUI countdown bitince) cagrilana kadar bekleniyor.
+    }
+
+    /// <summary>Gercek oyunun baslamasi gerektiginde (lobi countdown'u bitince, LobbyUI
+    /// tarafindan) BIR KEZ cagrilir. IsServer degilse veya oyun zaten basladiysa hicbir sey
+    /// yapmaz (cift cagriya karsi guvenli).</summary>
+    public bool HasGameBegun { get; private set; }
+
+    public void BeginGameServer()
+    {
+        if (!IsServer)
         {
-            StartDayServer(CurrentDay.Value);
+            Debug.LogWarning("[DayCycleManager] BeginGameServer sadece server'da calisir.");
+            return;
         }
+        if (HasGameBegun)
+        {
+            Debug.LogWarning("[DayCycleManager] BeginGameServer zaten cagrilmisti, tekrar baslatilmiyor.");
+            return;
+        }
+
+        HasGameBegun = true;
+        StartDayServer(CurrentDay.Value);
+    }
+
+    [ContextMenu("DEBUG: Begin Game NOW (solo test - lobi akisini atla)")]
+    private void DebugBeginGameNow()
+    {
+        if (!IsServer) { Debug.LogWarning("[DayCycleManager] Sadece server'da calisir."); return; }
+        BeginGameServer();
     }
 
     public override void OnNetworkDespawn()
@@ -134,6 +164,16 @@ private void StartDayServer(int day)
         IsFreeMode.Value = false;
 
         BonusVehiclesToday.Value = (prestigeManager != null) ? prestigeManager.ConsumeBonusServer() : 0;
+
+        // BUG DUZELTMESI: Gun 1'e OZEL - VehicleSpawner artik kendi OnNetworkSpawn'inda otomatik
+        // spawn etmiyor (bkz. VehicleSpawner.cs notu), bu yuzden gercek oyunun ilk aracini burada,
+        // BeginGameServer -> StartDayServer(1) zincirinde biz baslatiyoruz. Sonraki gunlerde
+        // (StartNextDayServer -> StartDayServer) VehicleSpawner zaten kuyruk/spawn dongusunu
+        // kendi ic mantigiyla surdurur, tekrar BeginSpawning cagirmaya gerek yok.
+        if (day == 1 && vehicleSpawner != null)
+        {
+            vehicleSpawner.BeginSpawning();
+        }
 
         Debug.Log("[DayCycleManager] Gun " + day + " basladi. Pencere: " + customerWindowSeconds +
                    "sn. Bugunku taban arac sayisi: " + GetVehicleCountForDay(day) +

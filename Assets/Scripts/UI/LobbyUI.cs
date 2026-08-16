@@ -66,6 +66,13 @@ public class LobbyUI : MonoBehaviour
     public LobbyManager lobbyManager;
     public int localSlotIndex = 0; // Oyuncu 1 = sen (hardcoded, T49'da client ID'ye baglanacak)
 
+    [Header("T50 - Lobi Listesi Baglantisi (Leave sonrasi donus icin)")]
+    public LobbyListUI lobbyListUI;
+
+    [Header("BUG DUZELTMESI - Gercek Oyun Baslangici (countdown 0'da cagrilir, DayCycleManager/VehicleSpawner artik network-spawn aninda degil bu sinyalle basliyor)")]
+    public DayCycleManager dayCycleManager;
+
+
     private bool isSelectionLocked = false;
     private bool isReady = false;
 
@@ -86,28 +93,45 @@ public class LobbyUI : MonoBehaviour
     /// <summary>MainMenuController.OnCreateLobbyClicked/OnJoinLobbyClicked sonrasi cagirir.
     /// Lobi kodunu (rakam-only, T50'de gercek host tarafinda ayni yontemle uretilecek) ve
     /// baslangic degerlerini ayarlar.</summary>
-public void Show()
+/// <summary>MainMenuController.OnCreateLobbyClicked/LobbyListUI.OnLobbyRowClicked sonrasi
+    /// cagirir. T50: lobi kodu artik burada rastgele URETILMEZ, LobbySessionManager'in GERCEK
+    /// kodu parametre olarak alinir (host icin CreateLobby, katilan icin JoinLobby donusu).</summary>
+    public void Show(int code)
     {
         if (panelRoot != null) panelRoot.SetActive(true);
-        GenerateLobbyCode();
+        lobbyCode = code;
+        if (lobbyCodeText != null) lobbyCodeText.text = lobbyCode.ToString();
+        UpdatePlayerCountDisplay();
         UpdatePlaceholderSlots();
         SelectCharacter(0);
         if (forceStartModalPanel != null) forceStartModalPanel.SetActive(false);
     }
 
+    /// <summary>Geriye donuk uyumluluk icin parametresiz overload - gercek bir
+    /// LobbySessionManager kodu olmadan rastgele bir kod uretir. T50 sonrasi
+    /// MainMenuController/LobbyListUI HER ZAMAN Show(int code) kullanir, bu sadece test/eski
+    /// cagrilar icin guvenlik agi.</summary>
+    public void Show()
+    {
+        Show(Random.Range(1000, 9999));
+    }
+
+    /// <summary>T50: Ust bilgideki oyuncu sayisini LobbySessionManager.CurrentLobby'den okur
+    /// (gercek veri). Eslesme yoksa (ornegin eski parametresiz Show() cagrisi) 1/5 gosterir.</summary>
+    private void UpdatePlayerCountDisplay()
+    {
+        int count = 1;
+        if (LobbySessionManager.CurrentLobby.HasValue && LobbySessionManager.CurrentLobby.Value.lobbyCode == lobbyCode)
+        {
+            count = LobbySessionManager.CurrentLobby.Value.playerCount;
+        }
+        if (playerCountText != null) playerCountText.text = count + "/" + LobbySessionManager.MaxPlayersPerLobby;
+        if (countdownText != null) countdownText.text = "-";
+    }
+
     public void Hide()
     {
         if (panelRoot != null) panelRoot.SetActive(false);
-    }
-
-    /// <summary>4 haneli rakam-only lobi kodu (harf YOK). PLAN.md/HANDOFF gereği
-    /// Random.Range(1000, 9999).</summary>
-    private void GenerateLobbyCode()
-    {
-        lobbyCode = Random.Range(1000, 9999);
-        if (lobbyCodeText != null) lobbyCodeText.text = lobbyCode.ToString();
-        if (playerCountText != null) playerCountText.text = "1/5";
-        if (countdownText != null) countdownText.text = "-";
     }
 
     /// <summary>Oturum 1'de gercek oyuncu verisi yok - sabit "Oyuncu N" placeholder metni
@@ -249,7 +273,7 @@ private void WireButtons()
         countdownCoroutine = StartCoroutine(CountdownRoutine());
     }
 
-    private System.Collections.IEnumerator CountdownRoutine()
+private System.Collections.IEnumerator CountdownRoutine()
     {
         while (countdownSecondsRemaining > 0)
         {
@@ -269,9 +293,22 @@ private void WireButtons()
 
         isCountdownRunning = false;
         countdownCoroutine = null;
-        // NOT: Gercek scene gecisi (SceneManager.LoadScene) T48/T50'de eklenecek.
-        // T47 kapsami sadece UI/timer oldugu icin burada placeholder log birakiliyor.
-        Debug.Log("[LobbyUI] (Placeholder) Game scene'e gecis burada tetiklenecek (T48/T50).");
+
+        // BUG DUZELTMESI: Onceden burada sadece placeholder Debug.Log vardi - gercek oyun HICBIR
+        // ZAMAN baslamiyordu, cunku DayCycleManager/VehicleSpawner zaten [Lobi Olustur] anindaki
+        // network-spawn ile (yanlislikla) baslamis oluyordu. Artik gercek tetikleyici BURASI:
+        // countdown 0'a inip "Oyun Basliyor" 2sn gosterildikten sonra DayCycleManager.BeginGameServer()
+        // cagrilir. Host degilse (dayCycleManager.BeginGameServer icindeki IsServer kontrolu) sessizce
+        // no-op olur - bu guvenli, host-only kisitlamasi (T50 acik maddesi) ileride netlesecek.
+        if (dayCycleManager != null)
+        {
+            dayCycleManager.BeginGameServer();
+            Debug.Log("[LobbyUI] DayCycleManager.BeginGameServer() cagrildi - gercek oyun (Gun 1) simdi basliyor.");
+        }
+        else
+        {
+            Debug.LogWarning("[LobbyUI] dayCycleManager atanmamis - gercek oyun baslatilamadi.");
+        }
     }
 
     /// <summary>T47: Countdown metnini gunceller ("15","14",...,"0").</summary>
@@ -338,8 +375,25 @@ private void OnStartGameClicked()
         Debug.Log("[LobbyUI] Force start iptal edildi (Geri), lobi beklemeye devam.");
     }
 
+/// <summary>T50: LobbySessionManager.LeaveLobby() ile lobiden GERCEK cikis yapar (playerCount
+    /// azalir, 0'a duserse lobi listeden silinir). Countdown varsa sifirlanir, bu Canvas
+    /// kapanir ve LobbyListUI.Show() ile Lobiye Katil ekranina donulur (TASKS.md T50 Test:
+    /// "Lobi scene'den [Leave] basinca Lobiye Katil listesine donuyor mu").</summary>
     private void OnLeaveClicked()
     {
-        Debug.Log("[LobbyUI] Leave tiklandi (Oturum 1.5'te lobi listesine donus mantigi eklenecek).");
+        LobbySessionManager.LeaveLobby();
+        ResetCountdown();
+        Hide();
+
+        if (lobbyListUI != null)
+        {
+            lobbyListUI.Show();
+        }
+        else
+        {
+            Debug.LogWarning("[LobbyUI] lobbyListUI atanmamis - Leave sonrasi Lobiye Katil listesine donulemedi (T50).");
+        }
+
+        Debug.Log("[LobbyUI] Leave: LobbySessionManager.LeaveLobby() cagirildi, Lobiye Katil listesine donuluyor.");
     }
 }

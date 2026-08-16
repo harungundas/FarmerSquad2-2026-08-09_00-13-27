@@ -74,11 +74,27 @@ public Transform DespawnPoint => despawnPoint;
         return null;
     }
 
-    public override void OnNetworkSpawn()
+public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
 
-        if (!IsServer) return; // Do: "NetworkObject olarak spawn (host authoritative)"
+        // BUG DUZELTMESI (kullanici raporu): SpawnTestVehicle() burada ARTIK otomatik
+        // cagrilmiyor. Onceden koşulsuzdu - NGO host StartHost() caginca bu NetworkObject
+        // otomatik spawn ediyor, yani [Lobi Olustur] tiklanir tiklanmaz oyuncu hala Lobi
+        // ekranindayken "2x Tavuk siparisi geldi" uyarisi cikiyordu. Artik BeginSpawning()
+        // disaridan (DayCycleManager.BeginGameServer -> gercek gun 1 baslangici) cagrilana
+        // kadar bekleniyor.
+    }
+
+    /// <summary>DayCycleManager.BeginGameServer() tarafindan (gercek oyun basladiginda) BIR KEZ
+    /// cagrilir. IsServer degilse hicbir sey yapmaz.</summary>
+    public void BeginSpawning()
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("[VehicleSpawner] BeginSpawning sadece server'da calisir.");
+            return;
+        }
 
         SpawnTestVehicle();
     }

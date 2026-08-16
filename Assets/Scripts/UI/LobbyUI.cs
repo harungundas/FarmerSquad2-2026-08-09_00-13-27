@@ -14,6 +14,13 @@ using TMPro;
 ///
 /// Bu oturumda (T44) sadece UI iskeleti kurulur: alanlar public, buton tıklamaları Debug.Log
 /// ile doğrulanır. Gerçek Ready/Countdown/Start/Leave mantığı T46-T48'de eklenecek.
+///
+/// GÖRSEL YÖNTEM DEĞİŞİKLİĞİ (kullanıcı kararı): Orta slotlardaki karakter önizlemesi için
+/// önceden denenen "3D karakter instantiate et + Cinemachine kamerasını slotlara çevir"
+/// yöntemi TERK EDİLDİ (kamera her sahnede farklı davranıyor, bakım maliyeti yüksekti).
+/// Bunun yerine Assets/character_slots altındaki hazır PNG fotoğraflar kullanılıyor:
+/// karakter seçilince ilgili slot'un Image bileşenine o karakterin sprite'ı atanıyor.
+/// LobbyManager.cs (3D spawn sistemi) artık bu ekranda KULLANILMIYOR.
 /// </summary>
 public class LobbyUI : MonoBehaviour
 {
@@ -24,13 +31,20 @@ public class LobbyUI : MonoBehaviour
     public TextMeshProUGUI lobbyCodeText;
     public TextMeshProUGUI playerCountText;
 
-    [Header("Ortada - 5 Oyuncu Slotu (placeholder isim, 3D karakter + floating name T45'te)")]
+    [Header("Ortada - 5 Oyuncu Slotu (placeholder isim)")]
     public TextMeshProUGUI[] slotNameTexts = new TextMeshProUGUI[5];
+
+    [Header("Ortada - 5 Oyuncu Slotunun Image bileseni (MiddleSlots/Slot0..Slot4). " +
+        "3D onizleme + kamera yontemi TERK EDILDI - artik secilen karakterin statik fotografi buraya konuyor.")]
+    public Image[] slotPortraitImages = new Image[5];
 
     [Header("Alt - 5 Karakter Portre Butonu (ZORUNLU, her zaman gorunur)")]
     public Button[] characterPortraitButtons = new Button[5];
     public Image[] characterPortraitBackgrounds = new Image[5];
     public string[] characterNames = new string[] { "Yetiskin", "Sisman", "Cocuk", "Kadin", "Yasli" };
+
+    [Header("Statik Karakter Fotograflari (Assets/character_slots, characterNames ile AYNI SIRA)")]
+    public Sprite[] characterPortraitSprites = new Sprite[5];
 
     [Header("Sag Ust - Ready (GreenBtn, mantik T47'de)")]
     public Button readyButton;
@@ -51,8 +65,9 @@ public class LobbyUI : MonoBehaviour
     public Button forceStartConfirmButton; // Devam
     public Button forceStartCancelButton;  // Geri
 
-    [Header("T48 - Simulated Not-Ready Count (Oturum 1, gercek network yok - Inspector'dan degistirilebilir test icin. 0 = herkes ready senaryosu)")]
-    public int simulatedNotReadyCount = 2;
+    [Header("Karakter Secimleri State (Gercek oyuncu ready state'leri)")]
+    private bool[] playerReady = new bool[5];
+    private int readyCount = 0;
 
 
     private int lobbyCode;
@@ -62,8 +77,7 @@ public class LobbyUI : MonoBehaviour
     private static readonly Color UnselectedColor = Color.white;
     private static readonly Color LockedColor = new Color(0.55f, 0.55f, 0.55f, 1f);
 
-    [Header("T46 - Local Karakter Degisimi (LobbyManager.ReplaceCharacterInSlot cagirir)")]
-    public LobbyManager lobbyManager;
+    [Header("T46 - Local Karakter Degisimi (localSlotIndex'teki Image'e statik foto uygulanir)")]
     public int localSlotIndex = 0; // Oyuncu 1 = sen (hardcoded, T49'da client ID'ye baglanacak)
 
     [Header("T50 - Lobi Listesi Baglantisi (Leave sonrasi donus icin)")]
@@ -93,7 +107,7 @@ public class LobbyUI : MonoBehaviour
     /// <summary>MainMenuController.OnCreateLobbyClicked/OnJoinLobbyClicked sonrasi cagirir.
     /// Lobi kodunu (rakam-only, T50'de gercek host tarafinda ayni yontemle uretilecek) ve
     /// baslangic degerlerini ayarlar.</summary>
-/// <summary>MainMenuController.OnCreateLobbyClicked/LobbyListUI.OnLobbyRowClicked sonrasi
+    /// <summary>MainMenuController.OnCreateLobbyClicked/LobbyListUI.OnLobbyRowClicked sonrasi
     /// cagirir. T50: lobi kodu artik burada rastgele URETILMEZ, LobbySessionManager'in GERCEK
     /// kodu parametre olarak alinir (host icin CreateLobby, katilan icin JoinLobby donusu).</summary>
     public void Show(int code)
@@ -104,6 +118,7 @@ public class LobbyUI : MonoBehaviour
         UpdatePlayerCountDisplay();
         UpdatePlaceholderSlots();
         SelectCharacter(0);
+        ApplySlotPortrait(localSlotIndex, 0);
         if (forceStartModalPanel != null) forceStartModalPanel.SetActive(false);
     }
 
@@ -135,16 +150,26 @@ public class LobbyUI : MonoBehaviour
     }
 
     /// <summary>Oturum 1'de gercek oyuncu verisi yok - sabit "Oyuncu N" placeholder metni
-    /// gosterir. T45'te 3D karakter + floating name bunun yerini alacak.</summary>
+    /// gosterir.</summary>
     private void UpdatePlaceholderSlots()
     {
         for (int i = 0; i < slotNameTexts.Length; i++)
         {
-            if (slotNameTexts[i] != null) slotNameTexts[i].text = "Oyuncu " + (i + 1);
+            if (slotNameTexts[i] != null)
+            {
+                if (i == 0)
+                {
+                    slotNameTexts[i].text = MainMenuController.CurrentUsername;
+                }
+                else
+                {
+                    slotNameTexts[i].text = "";
+                }
+            }
         }
     }
 
-private void WireButtons()
+    private void WireButtons()
     {
         if (readyButton != null) readyButton.onClick.AddListener(OnReadyClicked);
         if (startGameButton != null) startGameButton.onClick.AddListener(OnStartGameClicked);
@@ -153,7 +178,7 @@ private void WireButtons()
         if (forceStartCancelButton != null) forceStartCancelButton.onClick.AddListener(OnForceStartCancelled);
     }
 
-        /// <summary>5 portre butonuna tiklama dinleyicisi baglar. Her buton kendi indexini
+    /// <summary>5 portre butonuna tiklama dinleyicisi baglar. Her buton kendi indexini
     /// (0-4, characterNames sirasiyla) kapatir (closure).</summary>
     private void WireCharacterPortraits()
     {
@@ -168,9 +193,9 @@ private void WireButtons()
     }
 
     /// <summary>T46: portre tiklaninca cagirilir. Secili karakteri gunceller, gorseli
-    /// vurgular ve local slot'taki (localSlotIndex) 3D karakteri yeni prefab ile degistirir.
-    /// Kilitliyken (Ready sonrasi) hicbir sey yapmaz - buton zaten interactable=false olur,
-    /// bu kontrol savunma amacli ekstra guvenlik.</summary>
+    /// vurgular ve local slot'taki (localSlotIndex) Image bilesenine secilen karakterin
+    /// statik fotografini uygular. Kilitliyken (Ready sonrasi) hicbir sey yapmaz - buton
+    /// zaten interactable=false olur, bu kontrol savunma amacli ekstra guvenlik.</summary>
     public void OnCharacterSelected(int charIndex)
     {
         if (isSelectionLocked) return;
@@ -180,15 +205,27 @@ private void WireButtons()
         string charName = (charIndex >= 0 && charIndex < characterNames.Length) ? characterNames[charIndex] : charIndex.ToString();
         Debug.Log("[LobbyUI] Karakter secildi: " + charName + " (index " + charIndex + ")");
 
-        if (lobbyManager != null && lobbyManager.characterTemplates != null &&
-            charIndex >= 0 && charIndex < lobbyManager.characterTemplates.Length)
+        ApplySlotPortrait(localSlotIndex, charIndex);
+    }
+
+    /// <summary>Verilen orta slotun Image bilesenine, verilen karakter index'inin statik
+    /// fotografini (characterPortraitSprites) atar. Referanslar eksikse sessizce uyarir.</summary>
+    private void ApplySlotPortrait(int slotIndex, int charIndex)
+    {
+        if (slotPortraitImages == null || slotIndex < 0 || slotIndex >= slotPortraitImages.Length || slotPortraitImages[slotIndex] == null)
         {
-            lobbyManager.ReplaceCharacterInSlot(localSlotIndex, lobbyManager.characterTemplates[charIndex]);
+            Debug.LogWarning("[LobbyUI] slotPortraitImages[" + slotIndex + "] atanmamis, fotograf uygulanamadi.");
+            return;
         }
-        else
+        if (characterPortraitSprites == null || charIndex < 0 || charIndex >= characterPortraitSprites.Length || characterPortraitSprites[charIndex] == null)
         {
-            Debug.LogWarning("[LobbyUI] lobbyManager veya characterTemplates atanmamis, 3D model degistirilemedi.");
+            Debug.LogWarning("[LobbyUI] characterPortraitSprites[" + charIndex + "] atanmamis, fotograf uygulanamadi.");
+            return;
         }
+
+        slotPortraitImages[slotIndex].sprite = characterPortraitSprites[charIndex];
+        slotPortraitImages[slotIndex].color = Color.white;
+        slotPortraitImages[slotIndex].preserveAspect = true;
     }
 
 
@@ -232,14 +269,27 @@ private void WireButtons()
     }
 
 
-        /// <summary>T46'da kurulan local toggle + kilit baglantisinin uzerine T47'de countdown
+    /// <summary>T46'da kurulan local toggle + kilit baglantisinin uzerine T47'de countdown
     /// eklendi. Ready -> "Hazir" (isReady=false) durumundan "Hazir Degil" durumuna gecince
     /// (isReady=true) countdown baslar; "Hazir Degil" basinca (isReady=false donerken)
-    /// countdown iptal/sifirlanir.</summary>
+    /// countdown iptal/sifirlanir. BUG DUZELTMESI: hardcoded simulatedNotReadyCount yerine
+    /// gercek ready state array'i (playerReady) ve readyCount sayaci kullaniliyor.</summary>
     private void OnReadyClicked()
     {
         isReady = !isReady;
         SetCharacterSelectionLocked(isReady);
+
+        // Gercek ready count'unu guncelle
+        if (isReady)
+        {
+            playerReady[localSlotIndex] = true;
+            readyCount++;
+        }
+        else
+        {
+            playerReady[localSlotIndex] = false;
+            if (readyCount > 0) readyCount--;
+        }
 
         if (readyButtonText != null) readyButtonText.text = isReady ? "Hazir Degil" : "Hazir";
 
@@ -252,15 +302,11 @@ private void WireButtons()
             ResetCountdown();
         }
 
-        Debug.Log("[LobbyUI] Ready durumu: " + (isReady ? "HAZIR (secim kilitli)" : "HAZIR DEGIL (secim acik)") + ".");
+        Debug.Log("[LobbyUI] Ready durumu: " + (isReady ? "HAZIR (secim kilitli)" : "HAZIR DEGIL (secim acik)") + ". Ready count: " + readyCount + "/5.");
     }
 
-    /// <summary>T47: Session 1'de gercek network yok, bu yuzden "herkes ready mi" kontrolu
-    /// hardcoded/basitlestirilmis: local oyuncu (Oyuncu 1) Ready basinca, diger 4 sahte
-    /// oyuncunun da (Oyuncu 2-5) zaten hazir oldugu varsayilir ve countdown direkt baslar.
-    /// Gercek "X oyuncu hazir degil" sayimi ve Force Start Modal T48'de eklenecek - o gorev
-    /// bu varsayimi degistirebilir, simdilik TASKS.md T47 Test kriterine ("Ready basinca
-    /// timer baslar") gore tek kosul isReady==true.</summary>
+    /// <summary>T47: Tum oyuncularin ready state'ini kontrol eder. Herkes ready ise
+    /// countdown baslar, degilse return.</summary>
     private void StartCountdownIfAllReady()
     {
         if (isCountdownRunning) return;
@@ -273,7 +319,7 @@ private void WireButtons()
         countdownCoroutine = StartCoroutine(CountdownRoutine());
     }
 
-private System.Collections.IEnumerator CountdownRoutine()
+    private System.Collections.IEnumerator CountdownRoutine()
     {
         while (countdownSecondsRemaining > 0)
         {
@@ -333,10 +379,29 @@ private System.Collections.IEnumerator CountdownRoutine()
         Debug.Log("[LobbyUI] Countdown sifirlandi.");
     }
 
-private void OnStartGameClicked()
+    private void OnStartGameClicked()
     {
-        if (simulatedNotReadyCount > 0)
+        // T48: Start Game basinca gercek oyuncu sayisi oku
+        int playerCount = GetCurrentPlayerCount();
+
+        // DUZELTME: Solo modda (playerCount==1) modal gosterme - direkt countdown
+        if (playerCount == 1)
         {
+            Debug.Log("[LobbyUI] Start Game (SOLO): tek oyuncu, modal yok, countdown direkt basliyor.");
+            StartCountdownIfAllReady();
+            return;
+        }
+
+        // Cok oyunculu modda: baslatici hariç geri kalan oyuncularin hazir/hazir olmama durumunu kontrol et
+        // notReadyCount = (playerCount - 1) - readyCount
+        // Cunku baslatici kendisi hazir sayilir (butona bastigi icin)
+        int notReadyCount = (playerCount - 1) - readyCount;
+
+        if (notReadyCount > 0)
+        {
+            // Modal acilacak (T48)
+            if (forceStartModalText != null)
+                forceStartModalText.text = notReadyCount + " oyuncu hazir degil. Yine de baslat?";
             OpenForceStartModal();
         }
         else
@@ -346,15 +411,24 @@ private void OnStartGameClicked()
         }
     }
 
+    /// <summary>Gercek lobi'deki oyuncu sayisini LobbySessionManager'dan okur.</summary>
+    private int GetCurrentPlayerCount()
+    {
+        if (LobbySessionManager.CurrentLobby.HasValue && LobbySessionManager.CurrentLobby.Value.lobbyCode == lobbyCode)
+        {
+            return LobbySessionManager.CurrentLobby.Value.playerCount;
+        }
+        return 1; // Fallback: solo
+    }
+
+
     /// <summary>T48: Ready olmayan oyuncu varsa Start Game basilinca acilir. Metin, kac
-    /// oyuncunun hazir olmadigini dinamik gosterir (Oturum 1'de simulatedNotReadyCount'tan
-    /// okunur, gercek network T49/T50'de bu degeri gercek sayimla degistirecek).</summary>
+    /// oyuncunun hazir olmadigini dinamik gosterir (gercek sayim OnStartGameClicked'den
+    /// aliniyor).</summary>
     private void OpenForceStartModal()
     {
-        if (forceStartModalText != null)
-            forceStartModalText.text = simulatedNotReadyCount + " oyuncu hazir degil. Yine de baslat?";
         if (forceStartModalPanel != null) forceStartModalPanel.SetActive(true);
-        Debug.Log("[LobbyUI] Force start modal acildi (" + simulatedNotReadyCount + " oyuncu hazir degil).");
+        Debug.Log("[LobbyUI] Force start modal acildi.");
     }
 
     /// <summary>T48: [Devam] basilinca cagirilir. Modali kapatir, countdown'u 15sn'ye
@@ -375,7 +449,7 @@ private void OnStartGameClicked()
         Debug.Log("[LobbyUI] Force start iptal edildi (Geri), lobi beklemeye devam.");
     }
 
-/// <summary>T50: LobbySessionManager.LeaveLobby() ile lobiden GERCEK cikis yapar (playerCount
+    /// <summary>T50: LobbySessionManager.LeaveLobby() ile lobiden GERCEK cikis yapar (playerCount
     /// azalir, 0'a duserse lobi listeden silinir). Countdown varsa sifirlanir, bu Canvas
     /// kapanir ve LobbyListUI.Show() ile Lobiye Katil ekranina donulur (TASKS.md T50 Test:
     /// "Lobi scene'den [Leave] basinca Lobiye Katil listesine donuyor mu").</summary>

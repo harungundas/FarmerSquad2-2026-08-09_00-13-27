@@ -202,6 +202,7 @@ public class MainMenuController : MonoBehaviour
     {
         if (settingsPanelRoot != null)
         {
+            if (panelRoot != null) panelRoot.SetActive(false);
             settingsPanelRoot.SetActive(true);
         }
         else

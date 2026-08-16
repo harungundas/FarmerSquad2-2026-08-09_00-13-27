@@ -3,56 +3,50 @@ using TMPro;
 
 /// <summary>
 /// Lobi 3D karakter önizleme sistemi (ARCHITECTURE.md "## Networking Foundation" ve
-/// "## Karakter Sistemi", TASKS.md T45 — Oturum 1, Network YOK).
+/// "## Karakter Sistemi", TASKS.md T45).
 ///
-/// NOT (HANDOFF T45 Deviations'a da yazılacak): Bu dosya daha önce YOKTU - TASKS.md T07
-/// "LobbyManager.cs — Steam lobi oluştur/katıl" olarak [x] işaretlenmişti ama script hiç
-/// oluşturulmamıştı. Bu oturumda dosya SIFIRDAN, SADECE T45 kapsamıyla (karakter önizleme)
-/// oluşturuldu. Steam lobi create/join/kick (T07'nin orijinal kapsamı) burada YOKTUR,
-/// T50'de (gerçek network bağlantısı) eklenecek.
-///
-/// Sorumluluk: 5 lobi slotuna (LobbySlots altındaki Slot0..Slot4) görsel-only karakter
-/// önizlemesi + floating isim etiketi yerleştirmek. Oturum 1'de hardcoded "Oyuncu N" isimleri
-/// kullanılır (bkz. LobbyUI.cs UpdatePlaceholderSlots - aynı placeholder mantığı).
+/// Sorumluluk: LobbyUI açıldığında, sadece local oyuncu (slot 0) spawn olur ve username'i
+/// floating isim olarak gösterilir. Diğer oyuncular network'ten gelince (T50) onlar eklenecek.
 /// </summary>
 public class LobbyManager : MonoBehaviour
 {
     [Header("5 Slot Transformu (LobbySlots altında, sırasıyla Slot0..Slot4)")]
     public Transform[] slotTransforms = new Transform[5];
 
-    [Header("5 Karakter Template'i (görsel-only, sıra: Yetişkin, Şişman, Çocuk, Kadın, Yaşlı — LobbyUI.characterNames ile AYNI sıra)")]
+    [Header("5 Karakter Template'i (görsel-only, sıra: Yetişkin, Şişman, Çocuk, Kadın, Yaşlı)")]
     public GameObject[] characterTemplates = new GameObject[5];
 
     [Header("Floating İsim Ayarları")]
     public Vector3 floatingNameOffset = new Vector3(0f, 2.0f, 0f);
     public float floatingNameFontSize = 4f;
 
-    [Header("Oturum 1 — Network YOK, Start() otomatik hepsini spawn eder")]
+    [Header("Oturum 1 — Network YOK, Start() sadece slot 0'a (local) spawn eder")]
     public bool autoSpawnOnStart = true;
 
     private void Start()
     {
         if (autoSpawnOnStart)
         {
-            SpawnAllPreviewCharacters();
+            SpawnLocalPlayerPreview();
         }
     }
 
-    /// <summary>5 slotun tamamına, characterTemplates sırasına göre önizleme karakteri koyar.
-    /// İsimler Oturum 1'de hardcoded "Oyuncu 1".."Oyuncu 5" (T46'da gerçek username'e bağlanacak).</summary>
-    private void SpawnAllPreviewCharacters()
+    /// <summary>Sadece slot 0'a (local oyuncu) spawn et. Username'i MainMenuController'dan al.</summary>
+    private void SpawnLocalPlayerPreview()
     {
-        int count = Mathf.Min(slotTransforms.Length, characterTemplates.Length);
-        for (int i = 0; i < count; i++)
+        if (slotTransforms.Length > 0 && characterTemplates.Length > 0 && slotTransforms[0] != null && characterTemplates[0] != null)
         {
-            SpawnCharacterInSlot(i, characterTemplates[i]);
+            SpawnCharacterInSlot(0, characterTemplates[0], MainMenuController.CurrentUsername);
+        }
+        else
+        {
+            Debug.LogWarning("[LobbyManager] Slot 0 veya characterTemplates[0] eksik.");
         }
     }
 
-    /// <summary>Verilen slota bir karakter prefabı/template'i instantiate eder, fizik
-    /// bileşenlerini görsel-only için devre dışı bırakır ve üstüne floating isim etiketi ekler.
-    /// TASKS.md T45 Context'te tanımlanan imza ile birebir aynı.</summary>
-    public GameObject SpawnCharacterInSlot(int slotIndex, GameObject characterPrefab)
+    /// <summary>Verilen slota bir karakter prefabı instantiate eder, görsel-only ayarlaması
+    /// yapar ve floating isim etiketi ekler.</summary>
+    public GameObject SpawnCharacterInSlot(int slotIndex, GameObject characterPrefab, string displayName)
     {
         if (characterPrefab == null)
         {
@@ -72,10 +66,7 @@ public class LobbyManager : MonoBehaviour
         instance.SetActive(true);
         instance.name = "PreviewCharacter_Slot" + slotIndex;
 
-        // Görsel-only: fizik bileşenleri devre dışı (ARCHITECTURE.md T45 Context —
-        // "Karakterlerin Rigidbody/Collider disabled yapılacak"). Template'ler zaten editörde
-        // devre dışı bırakıldı, burası her ihtimale karşı savunma amaçlı (gerçek bir prefab
-        // asset'i bağlanırsa da doğru çalışsın diye).
+        // Görsel-only: fizik bileşenleri devre dışı
         foreach (Rigidbody rb in instance.GetComponentsInChildren<Rigidbody>(true))
         {
             rb.isKinematic = true;
@@ -87,16 +78,12 @@ public class LobbyManager : MonoBehaviour
             col.enabled = false;
         }
 
-        string displayName = "Oyuncu " + (slotIndex + 1);
         CreateFloatingName(instance.transform, displayName);
 
         return instance;
     }
 
-    /// <summary>T46: Local oyuncu portre değiştirdiğinde çağrılır. Slotta halihazırda
-    /// duran önizleme karakterini (varsa) yok eder, sonra SpawnCharacterInSlot ile yenisini
-    /// kurar. Eski karakterin floating name'i FloatingNameFollower.LateUpdate() içinde
-    /// target==null olduğunu görüp kendini yok eder (bkz. FloatingNameFollower.cs).</summary>
+    /// <summary>T46: Local oyuncu portre değiştirdiğinde çağrılır.</summary>
     public GameObject ReplaceCharacterInSlot(int slotIndex, GameObject newPrefab)
     {
         if (slotTransforms == null || slotIndex < 0 || slotIndex >= slotTransforms.Length || slotTransforms[slotIndex] == null)
@@ -111,13 +98,10 @@ public class LobbyManager : MonoBehaviour
             Destroy(slot.GetChild(i).gameObject);
         }
 
-        return SpawnCharacterInSlot(slotIndex, newPrefab);
+        return SpawnCharacterInSlot(slotIndex, newPrefab, MainMenuController.CurrentUsername);
     }
 
-
-    /// <summary>Karakterin ~2m üstünde, world-space TextMeshPro ile bağımsız bir isim etiketi
-    /// oluşturur (child DEĞİL — bkz. FloatingNameFollower.cs açıklaması, scale sorunlarından
-    /// kaçınmak için LateUpdate ile takip eder).</summary>
+    /// <summary>Karakterin üstünde world-space TMP ile bağımsız isim etiketi oluşturur.</summary>
     private void CreateFloatingName(Transform target, string displayName)
     {
         GameObject nameGO = new GameObject("FloatingName_" + displayName);

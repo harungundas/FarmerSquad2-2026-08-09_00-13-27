@@ -23,6 +23,9 @@ public class SettingsUI : MonoBehaviour
     [Header("Panel")]
     public GameObject panelRoot;
 
+    [Header("Geri Donus (basit toggle)")]
+    [SerializeField] private GameObject mainMenuPanelRoot;
+
     [Header("Sekme Butonları")]
     public Button sesTabButton;
     public Button gorselTabButton;
@@ -74,6 +77,7 @@ public class SettingsUI : MonoBehaviour
     public void Hide()
     {
         if (panelRoot != null) panelRoot.SetActive(false);
+        if (mainMenuPanelRoot != null) mainMenuPanelRoot.SetActive(true);
     }
 
     private void OnSesTabClicked()

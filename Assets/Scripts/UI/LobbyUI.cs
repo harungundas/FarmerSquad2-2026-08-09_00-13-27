@@ -34,6 +34,9 @@ public class LobbyUI : MonoBehaviour
     [Header("Ortada - 5 Oyuncu Slotu (placeholder isim)")]
     public TextMeshProUGUI[] slotNameTexts = new TextMeshProUGUI[5];
 
+    [Header("Ortada - 5 Oyuncu Slotunun Ready Durum Metni (NameText altinda). Kirmizi X = Hazir Degil, Yesil tik = Hazir.")]
+    public TextMeshProUGUI[] slotReadyStatusTexts = new TextMeshProUGUI[5];
+
     [Header("Ortada - 5 Oyuncu Slotunun Image bileseni (MiddleSlots/Slot0..Slot4). " +
         "3D onizleme + kamera yontemi TERK EDILDI - artik secilen karakterin statik fotografi buraya konuyor.")]
     public Image[] slotPortraitImages = new Image[5];
@@ -76,6 +79,12 @@ public class LobbyUI : MonoBehaviour
     private static readonly Color SelectedColor = new Color(1f, 0.92f, 0.55f, 1f);
     private static readonly Color UnselectedColor = Color.white;
     private static readonly Color LockedColor = new Color(0.55f, 0.55f, 0.55f, 1f);
+
+    // Oyuncu adi altindaki Ready durum metni renkleri (kirmizi/yesil).
+    private static readonly Color NotReadyStatusColor = new Color(0.85f, 0.15f, 0.15f, 1f);
+    private static readonly Color ReadyStatusColor = new Color(0.15f, 0.75f, 0.2f, 1f);
+    private const string NotReadyStatusLabel = "\u2715 Haz\u0131r De\u011fil";
+    private const string ReadyStatusLabel = "\u2713 Haz\u0131r";
 
     [Header("T46 - Local Karakter Degisimi (localSlotIndex'teki Image'e statik foto uygulanir)")]
     public int localSlotIndex = 0; // Oyuncu 1 = sen (hardcoded, T49'da client ID'ye baglanacak)
@@ -151,7 +160,7 @@ public class LobbyUI : MonoBehaviour
 
     /// <summary>Oturum 1'de gercek oyuncu verisi yok - sabit "Oyuncu N" placeholder metni
     /// gosterir.</summary>
-    private void UpdatePlaceholderSlots()
+private void UpdatePlaceholderSlots()
     {
         for (int i = 0; i < slotNameTexts.Length; i++)
         {
@@ -166,6 +175,11 @@ public class LobbyUI : MonoBehaviour
                     slotNameTexts[i].text = "";
                 }
             }
+        }
+
+        for (int i = 0; i < slotReadyStatusTexts.Length; i++)
+        {
+            UpdateReadyStatusText(i, playerReady[i]);
         }
     }
 
@@ -227,6 +241,32 @@ public class LobbyUI : MonoBehaviour
         slotPortraitImages[slotIndex].color = Color.white;
         slotPortraitImages[slotIndex].preserveAspect = true;
     }
+
+/// <summary>Slot altindaki Ready durum metnini gunceller. Slot bos ise (o slotun oyuncu
+    /// adi bos ise) metin GIZLENIR (SetActive false). Slot doluysa Hazir (yesil) veya
+    /// Hazir Degil (kirmizi) yazisi uygulanir. Font/boyut/pozisyon burada degistirilmez -
+    /// sadece aktiflik, metin icerigi ve renk.</summary>
+    private void UpdateReadyStatusText(int slotIndex, bool ready)
+    {
+        if (slotReadyStatusTexts == null || slotIndex < 0 || slotIndex >= slotReadyStatusTexts.Length || slotReadyStatusTexts[slotIndex] == null)
+        {
+            return;
+        }
+
+        bool slotHasPlayer = slotNameTexts != null && slotIndex < slotNameTexts.Length && slotNameTexts[slotIndex] != null && !string.IsNullOrEmpty(slotNameTexts[slotIndex].text);
+
+        if (!slotHasPlayer)
+        {
+            slotReadyStatusTexts[slotIndex].text = "";
+            slotReadyStatusTexts[slotIndex].gameObject.SetActive(false);
+            return;
+        }
+
+        slotReadyStatusTexts[slotIndex].gameObject.SetActive(true);
+        slotReadyStatusTexts[slotIndex].text = ready ? ReadyStatusLabel : NotReadyStatusLabel;
+        slotReadyStatusTexts[slotIndex].color = ready ? ReadyStatusColor : NotReadyStatusColor;
+    }
+
 
 
 
@@ -292,6 +332,8 @@ public class LobbyUI : MonoBehaviour
         }
 
         if (readyButtonText != null) readyButtonText.text = isReady ? "Hazir Degil" : "Hazir";
+
+        UpdateReadyStatusText(localSlotIndex, isReady);
 
         if (isReady)
         {

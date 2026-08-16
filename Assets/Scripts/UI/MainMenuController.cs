@@ -3,7 +3,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Ana Menu (ARCHITECTURE.md "## Ana Menü & Lobi UI" + "## Ortak UI Kiti").
-/// [Lobi Oluştur]/[Lobiye Katıl]/[Profil]/[Ayarlar]/[Çıkış] butonları.
+/// [Lobi Oluştur]/[Lobiye Katıl]/[Ayarlar]/[Çıkış] butonları + sağ-altta sürekli görünür
+/// Profil kutusu (Profil: etiketi + kullanıcı adı + Kaydet).
 ///
 /// SAPMA (bkz. HANDOFF.md T40 notu, dogrulandi): TASKS.md T40 "LobbyManager (T07) ile baglanti"
 /// diyor, ama T07 GERCEKTEN atlanmis - Assets/Scripts/Networking/LobbyManager.cs YOK, sadece
@@ -15,13 +16,14 @@ using UnityEngine.UI;
 /// cagriliyor (oyuncu listesi + host-only kick gostermek icin). lobbyUI atanmamissa (henuz
 /// kurulmamis bir sahnede) stub log basar, hata firlatmaz.
 ///
-/// T49 EKLEMESI: [Profil] butonu -> ProfilePanel modal'i acar (Panel'in cocugu, ForceStartModalPanel
-/// ile ayni desen: merkezde sabit oranli anchor'li kutu). Kullanici adi PlayerPrefs'te
-/// "FarmerSquad_Username" anahtariyla kalici saklanir. Ilk acilista bos ise
-/// "username_{Random 10000-99999}" varsayilani uretilip hemen kaydedilir. CurrentUsername
-/// static property, PlayerPrefs ile senkron okur/yazar (TASKS.md T49 context: "public static
-/// string, initialization sadece ilk kez" - PlayerPrefs backing ile gercek kalicilik saglanir,
-/// boylece sonraki oyun acilislarinda da hatirlanir).
+/// T49 REVIZE (kullanici karari): Ayri bir [Profil] butonu ve modal KALDIRILDI. 5. buton
+/// (Cikis) dikey stack'te ekran disina taşıyordu; Profil butonu cikarilinca stack 4 butona
+/// dustu ve Cikis tekrar ekran icine girdi. Profil artik Panel'in SAG-ALT kosesinde HER ZAMAN
+/// gorunur kucuk bir kutu: "Profil:" etiketi + kullanici adi input + Kaydet butonu - ayri
+/// acilip kapanan bir modal degil. Kullanici adi PlayerPrefs'te "FarmerSquad_Username"
+/// anahtariyla kalici saklanir. Ilk acilista bos ise "username_{Random 10000-99999}"
+/// varsayilani uretilip hemen kaydedilir. CurrentUsername static property, PlayerPrefs ile
+/// senkron okur/yazar.
 ///
 /// Tek sahne projesi (Build Settings'te sadece SampleScene var). Diger ekranlarla (HUDCanvas,
 /// WinScreenCanvas, LoseScreenController, MarketCanvas) AYNI desen: bu panel de kendi
@@ -63,7 +65,6 @@ public class MainMenuController : MonoBehaviour
     public GameObject panelRoot;
     public Button createLobbyButton;
     public Button joinLobbyButton;
-    public Button profilButton;
     public Button settingsButton;
     public Button quitButton;
 
@@ -76,12 +77,10 @@ public class MainMenuController : MonoBehaviour
     [Header("Lobi Listesi (T50)")]
     [SerializeField] private LobbyListUI lobbyListUI;
 
-
-    [Header("Profil (T49)")]
+    [Header("Profil (T49, REVIZE: artik sag-alt kosede SUREKLI gorunur kucuk kutu, modal DEGIL)")]
     [SerializeField] private GameObject profilePanelRoot;
     [SerializeField] private TMPro.TMP_InputField usernameInputField;
     [SerializeField] private Button profilKaydetButton;
-    [SerializeField] private Button profilGeriButton;
 
     [Header("Ayarlar (opsiyonel - SettingsUI T42'de kurulacak, henuz YOK)")]
     [SerializeField] private GameObject settingsPanelRoot;
@@ -89,25 +88,25 @@ public class MainMenuController : MonoBehaviour
     private void Awake()
     {
         if (panelRoot != null) panelRoot.SetActive(true);
-        if (profilePanelRoot != null) profilePanelRoot.SetActive(false);
 
         if (createLobbyButton != null) createLobbyButton.onClick.AddListener(OnCreateLobbyClicked);
         if (joinLobbyButton != null) joinLobbyButton.onClick.AddListener(OnJoinLobbyClicked);
-        if (profilButton != null) profilButton.onClick.AddListener(OnProfilClicked);
         if (settingsButton != null) settingsButton.onClick.AddListener(OnSettingsClicked);
         if (quitButton != null) quitButton.onClick.AddListener(OnQuitClicked);
 
         if (profilKaydetButton != null) profilKaydetButton.onClick.AddListener(OnProfilKaydetClicked);
-        if (profilGeriButton != null) profilGeriButton.onClick.AddListener(OnProfilGeriClicked);
+
+        // Profil artik ayri bir buton/modal degil - Panel'in sag-alt kosesinde SUREKLI
+        // gorunur kucuk bir alan (Profil: etiketi + kullanici adi input + Kaydet). Bu yuzden
+        // ProfilePanel her zaman acik kalir, sadece username baslangic degeri yuklenir.
+        if (profilePanelRoot != null) profilePanelRoot.SetActive(true);
+        if (usernameInputField != null) usernameInputField.text = CurrentUsername;
 
         // Uygulama acilisinda kullanici adini garanti et (yoksa varsayilan uret+kaydet).
         var ensureLoaded = CurrentUsername;
     }
 
-    /// <summary>[Lobi Oluştur] (BlueBtn). GameNetworkManager.StartHost() cagirir (gercek Steam
-    /// lobi kodu yok - bkz. sinif yorumu). Basarili baslatma sonrasi menu paneli kapanir ve
-    /// LobbyUI acilir.</summary>
-/// <summary>[Lobi Oluştur] (BlueBtn). LobbySessionManager.CreateLobby() ile GERÇEK (hardcoded
+    /// <summary>[Lobi Oluştur] (BlueBtn). LobbySessionManager.CreateLobby() ile GERÇEK (hardcoded
     /// olmayan) 4 haneli lobi kodu üretir (TASKS.md T50), sonra GameNetworkManager.StartHost()
     /// çağırır. Menü paneli kapanır, LobbyUI üretilen gerçek kodla açılır.</summary>
     private void OnCreateLobbyClicked()
@@ -125,10 +124,7 @@ public class MainMenuController : MonoBehaviour
         ShowLobbyUI(info.lobbyCode);
     }
 
-    /// <summary>[Lobiye Katıl] (BlueBtn). GameNetworkManager.StartClient() cagirir - lobi kodu
-    /// girisi YOK, NetworkManager'in Inspector'daki varsayilan UTP adresine baglanir (bkz. sinif
-    /// yorumu). Basarili baslatma sonrasi menu paneli kapanir ve LobbyUI acilir.</summary>
-/// <summary>[Lobiye Katıl] (BlueBtn). T50 ONCESI dogrudan StartClient() cagiriyordu; ARTIK
+    /// <summary>[Lobiye Katıl] (BlueBtn). T50 ONCESI dogrudan StartClient() cagiriyordu; ARTIK
     /// LobbyListUI'yi acar (gercek ActiveLobbies verisiyle) - gercek katilim, secilen satira
     /// tiklaninca LobbyListUI.OnLobbyRowClicked() icinde StartClient() ile tetiklenir.</summary>
     private void OnJoinLobbyClicked()
@@ -142,9 +138,7 @@ public class MainMenuController : MonoBehaviour
         lobbyListUI.Show();
     }
 
-    /// <summary>lobbyUI atanmissa Show() cagirir; atanmamissa (henuz kurulmamis bir sahnede)
-    /// sessizce stub log basar, hata firlatmaz.</summary>
-/// <summary>lobbyUI atanmissa Show(code) cagirir (gercek lobi koduyla - T50); atanmamissa
+    /// <summary>lobbyUI atanmissa Show(code) cagirir (gercek lobi koduyla - T50); atanmamissa
     /// (henuz kurulmamis bir sahnede) sessizce stub log basar, hata firlatmaz.</summary>
     private void ShowLobbyUI(int lobbyCode)
     {
@@ -158,23 +152,9 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
-    /// <summary>[Profil] (GrayBtn). ProfilePanel modal'ini acar, input field'i mevcut
-    /// CurrentUsername ile doldurur. Ana menu panel'i ARKADA acik kalir (ForceStartModalPanel
-    /// ile ayni desen - modal ustte, alttaki panel kapanmaz).</summary>
-    private void OnProfilClicked()
-    {
-        if (profilePanelRoot == null)
-        {
-            Debug.LogError("[MainMenuController] profilePanelRoot atanmamis.");
-            return;
-        }
-
-        if (usernameInputField != null) usernameInputField.text = CurrentUsername;
-        profilePanelRoot.SetActive(true);
-    }
-
-    /// <summary>[Kaydet] (GreenBtn). Input field'daki metni CurrentUsername'e yazar (bos veya
-    /// sadece boslukdan olusuyorsa kaydetmez, eski adi korur) ve modal'i kapatir.</summary>
+    /// <summary>[Kaydet] (GreenBtn, artik sag-alt kosede SUREKLI gorunur panelde). Input
+    /// field'daki metni CurrentUsername'e yazar (bos veya sadece bosluktan olusuyorsa
+    /// kaydetmez, eski adi korur). Modal olmadigi icin panel KAPANMAZ - sadece kaydeder.</summary>
     private void OnProfilKaydetClicked()
     {
         if (usernameInputField != null)
@@ -183,16 +163,11 @@ public class MainMenuController : MonoBehaviour
             if (!string.IsNullOrEmpty(trimmed))
             {
                 CurrentUsername = trimmed;
+                usernameInputField.text = CurrentUsername;
             }
         }
 
-        if (profilePanelRoot != null) profilePanelRoot.SetActive(false);
-    }
-
-    /// <summary>[Geri] (GrayBtn). Degisiklikleri KAYDETMEDEN modal'i kapatir.</summary>
-    private void OnProfilGeriClicked()
-    {
-        if (profilePanelRoot != null) profilePanelRoot.SetActive(false);
+        Debug.Log("[MainMenuController] Kullanici adi kaydedildi: " + CurrentUsername);
     }
 
     /// <summary>[Ayarlar] (GrayBtn). SettingsUI (T42) henuz kurulu degil - settingsPanelRoot

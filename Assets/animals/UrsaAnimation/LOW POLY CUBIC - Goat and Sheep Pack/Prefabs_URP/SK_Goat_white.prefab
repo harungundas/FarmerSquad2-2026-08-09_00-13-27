@@ -2576,6 +2576,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6885452974112614186}
   - component: {fileID: 6885452974112614181}
+  - component: {fileID: 6885452974112614180}
   - component: {fileID: 5570069471746826107}
   - component: {fileID: 1020122251812481633}
   - component: {fileID: 664155009113113436}
@@ -2626,6 +2627,27 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6885452974112614180
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6885452974112614176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e5010bff315c6e4c8a413f69e3d6458, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  animator: {fileID: 0}
+  walkForwardAnimation: walk_forward
+  walkBackwardAnimation: walk_backwards
+  runForwardAnimation: run_forward
+  turn90LAnimation: turn_90_L
+  turn90RAnimation: turn_90_R
+  trotAnimation: trot_forward
+  sittostandAnimation: sit_to_stand
+  standtositAnimation: stand_to_sit
 --- !u!114 &5570069471746826107
 MonoBehaviour:
   m_ObjectHideFlags: 0

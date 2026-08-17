@@ -21,6 +21,14 @@ using TMPro;
 /// Bunun yerine Assets/character_slots altındaki hazır PNG fotoğraflar kullanılıyor:
 /// karakter seçilince ilgili slot'un Image bileşenine o karakterin sprite'ı atanıyor.
 /// LobbyManager.cs (3D spawn sistemi) artık bu ekranda KULLANILMIYOR.
+///
+/// BUG DUZELTMESI (kullanici raporu): Start Game butonu (a) host-only degildi, herkes
+/// basabiliyordu, (b) host basinca kendisi otomatik Hazir olmuyordu, (c) countdown
+/// basladiktan sonra geri donmek icin Iptal secenegi yoktu. Ucu de bu surumde eklendi:
+/// isLocalPlayerHost kontrolu (LobbySessionManager.CurrentLobby.hostUsername ile
+/// MainMenuController.CurrentUsername karsilastirmasi), BeginHostCountdown() host'u
+/// otomatik ready yapar, StartCountdownIfAllReady/ResetCountdown artik Start Game
+/// butonunun gorselini (Baslat mavi <-> Iptal kirmizi) merkezi olarak yonetir.
 /// </summary>
 public class LobbyUI : MonoBehaviour
 {
@@ -53,8 +61,12 @@ public class LobbyUI : MonoBehaviour
     public Button readyButton;
     public TextMeshProUGUI readyButtonText;
 
-    [Header("Sag Alt - Start Game (BlueBtn, host-only, mantik T48'de)")]
+    [Header("Sag Alt - Start Game (host-only). Countdown calisirken Baslat->Iptal'e donusur (renk+metin).")]
     public Button startGameButton;
+    public Image startGameButtonImage;
+    public TextMeshProUGUI startGameButtonText;
+    public Sprite startGameDefaultSprite; // mavi "Baslat"
+    public Sprite startGameCancelSprite;  // kirmizi "Iptal"
 
     [Header("Sol Alt - Leave (RedBtn)")]
     public Button leaveButton;
@@ -75,6 +87,11 @@ public class LobbyUI : MonoBehaviour
 
     private int lobbyCode;
     private int selectedCharacterIndex = 0;
+
+    /// <summary>BUG DUZELTMESI: local oyuncu bu lobiyi olusturan host mu? Show(code) icinde
+    /// LobbySessionManager.CurrentLobby.hostUsername ile MainMenuController.CurrentUsername
+    /// karsilastirilarak hesaplanir. Start Game butonu SADECE bu true iken gorunur/etkin olur.</summary>
+    private bool isLocalPlayerHost = false;
 
     private static readonly Color SelectedColor = new Color(1f, 0.92f, 0.55f, 1f);
     private static readonly Color UnselectedColor = Color.white;
@@ -118,12 +135,30 @@ public class LobbyUI : MonoBehaviour
     /// baslangic degerlerini ayarlar.</summary>
     /// <summary>MainMenuController.OnCreateLobbyClicked/LobbyListUI.OnLobbyRowClicked sonrasi
     /// cagirir. T50: lobi kodu artik burada rastgele URETILMEZ, LobbySessionManager'in GERCEK
-    /// kodu parametre olarak alinir (host icin CreateLobby, katilan icin JoinLobby donusu).</summary>
+    /// kodu parametre olarak alinir (host icin CreateLobby, katilan icin JoinLobby donusu).
+    ///
+    /// BUG DUZELTMESI: isLocalPlayerHost burada hesaplanir (CurrentLobby.hostUsername ==
+    /// MainMenuController.CurrentUsername) ve Start Game butonu SADECE host icin aktif/gorunur
+    /// yapilir. Ayrica local ready/countdown state'i temiz sayfa acar (Show her cagirildiginda).</summary>
     public void Show(int code)
     {
         if (panelRoot != null) panelRoot.SetActive(true);
         lobbyCode = code;
         if (lobbyCodeText != null) lobbyCodeText.text = lobbyCode.ToString();
+
+        isLocalPlayerHost = LobbySessionManager.CurrentLobby.HasValue
+            && LobbySessionManager.CurrentLobby.Value.lobbyCode == lobbyCode
+            && LobbySessionManager.CurrentLobby.Value.hostUsername == MainMenuController.CurrentUsername;
+
+        if (startGameButton != null) startGameButton.gameObject.SetActive(isLocalPlayerHost);
+
+        // Temiz baslangic: onceki bir lobiden kalma ready/countdown state'i tasinmasin.
+        isReady = false;
+        System.Array.Clear(playerReady, 0, playerReady.Length);
+        readyCount = 0;
+        if (readyButtonText != null) readyButtonText.text = "Hazir";
+        ResetCountdown();
+
         UpdatePlayerCountDisplay();
         UpdatePlaceholderSlots();
         SelectCharacter(0);
@@ -308,18 +343,18 @@ private void UpdatePlaceholderSlots()
         }
     }
 
-
-    /// <summary>T46'da kurulan local toggle + kilit baglantisinin uzerine T47'de countdown
-    /// eklendi. Ready -> "Hazir" (isReady=false) durumundan "Hazir Degil" durumuna gecince
-    /// (isReady=true) countdown baslar; "Hazir Degil" basinca (isReady=false donerken)
-    /// countdown iptal/sifirlanir. BUG DUZELTMESI: hardcoded simulatedNotReadyCount yerine
-    /// gercek ready state array'i (playerReady) ve readyCount sayaci kullaniliyor.</summary>
-    private void OnReadyClicked()
+    /// <summary>BUG DUZELTMESI - eskiden OnReadyClicked icine gomulmustu, artik ortak metod:
+    /// local oyuncunun ready durumunu VERILEN degere set eder (toggle degil, dogrudan atama).
+    /// Hem manuel Ready butonundan hem de host Start Game basinca otomatik "Hazir" olmasindan
+    /// (BeginHostCountdown) cagirilir. Zaten istenen durumdaysa hicbir sey yapmaz (cift sayim
+    /// onlenir).</summary>
+    private void SetLocalReady(bool ready)
     {
-        isReady = !isReady;
+        if (isReady == ready) return;
+
+        isReady = ready;
         SetCharacterSelectionLocked(isReady);
 
-        // Gercek ready count'unu guncelle
         if (isReady)
         {
             playerReady[localSlotIndex] = true;
@@ -332,8 +367,17 @@ private void UpdatePlaceholderSlots()
         }
 
         if (readyButtonText != null) readyButtonText.text = isReady ? "Hazir Degil" : "Hazir";
-
         UpdateReadyStatusText(localSlotIndex, isReady);
+    }
+
+    /// <summary>T46'da kurulan local toggle + kilit baglantisinin uzerine T47'de countdown
+    /// eklendi. Ready -> "Hazir" (isReady=false) durumundan "Hazir Degil" durumuna gecince
+    /// (isReady=true) countdown baslar; "Hazir Degil" basinca (isReady=false donerken)
+    /// countdown iptal/sifirlanir. BUG DUZELTMESI: artik SetLocalReady() ortak metodunu
+    /// kullanir (host'un otomatik ready olmasiyla ayni kod yolu).</summary>
+    private void OnReadyClicked()
+    {
+        SetLocalReady(!isReady);
 
         if (isReady)
         {
@@ -348,7 +392,10 @@ private void UpdatePlaceholderSlots()
     }
 
     /// <summary>T47: Tum oyuncularin ready state'ini kontrol eder. Herkes ready ise
-    /// countdown baslar, degilse return.</summary>
+    /// countdown baslar, degilse return. BUG DUZELTMESI: countdown baslarken host icin
+    /// Start Game butonunu (varsa) kirmizi "Iptal" gorunumune merkezi olarak cevirir -
+    /// countdown herkes-ready ile mi yoksa host'un Start Game/Force Start ile mi
+    /// baslatildigina bakmaksizin ayni gorsel garanti edilir.</summary>
     private void StartCountdownIfAllReady()
     {
         if (isCountdownRunning) return;
@@ -356,6 +403,8 @@ private void UpdatePlaceholderSlots()
         countdownSecondsRemaining = CountdownStartSeconds;
         isCountdownRunning = true;
         UpdateCountdownDisplay();
+
+        if (isLocalPlayerHost) SetStartButtonVisual(true);
 
         if (countdownCoroutine != null) StopCoroutine(countdownCoroutine);
         countdownCoroutine = StartCoroutine(CountdownRoutine());
@@ -381,6 +430,7 @@ private void UpdatePlaceholderSlots()
 
         isCountdownRunning = false;
         countdownCoroutine = null;
+        if (isLocalPlayerHost) SetStartButtonVisual(false);
 
         // BUG DUZELTMESI: Onceden burada sadece placeholder Debug.Log vardi - gercek oyun HICBIR
         // ZAMAN baslamiyordu, cunku DayCycleManager/VehicleSpawner zaten [Lobi Olustur] anindaki
@@ -397,6 +447,12 @@ private void UpdatePlaceholderSlots()
         {
             Debug.LogWarning("[LobbyUI] dayCycleManager atanmamis - gercek oyun baslatilamadi.");
         }
+
+        // BUG DUZELTMESI (kullanici raporu): Oyun basladiktan sonra Lobi Canvas'i (Panel)
+        // gizli kalmiyordu - hem gorsel olarak ekranda kaliyordu hem de ustundeki UI
+        // raycast'leri (Canvas Graphic Raycaster) oyuncunun karakteri kontrol etmesini
+        // engelliyordu/karisiyordu. Oyun basinca lobi ekrani tamamen kapatilir.
+        Hide();
     }
 
     /// <summary>T47: Countdown metnini gunceller ("15","14",...,"0").</summary>
@@ -405,8 +461,10 @@ private void UpdatePlaceholderSlots()
         if (countdownText != null) countdownText.text = countdownSecondsRemaining.ToString();
     }
 
-    /// <summary>T47: Countdown iptal/sifirlama. "Hazir Degil" basilinca cagirilir - coroutine'i
-    /// durdurur, sayaci sifirlar, countdownText'i "-" yapar. NOT: DayCycleManager'in 240sn
+    /// <summary>T47: Countdown iptal/sifirlama. "Hazir Degil" basilinca veya host Start Game'i
+    /// (artik "Iptal" durumundayken) tekrar basinca cagirilir - coroutine'i durdurur, sayaci
+    /// sifirlar, countdownText'i "-" yapar. BUG DUZELTMESI: host icin Start Game butonunu
+    /// merkezi olarak mavi "Baslat" gorunumune geri dondurur. NOT: DayCycleManager'in 240sn
     /// gun-ici sayaciyla KARISTIRILMAMALI, bu tamamen ayri bir lobi-ici sistemdir.</summary>
     private void ResetCountdown()
     {
@@ -418,25 +476,71 @@ private void UpdatePlaceholderSlots()
         }
         countdownSecondsRemaining = CountdownStartSeconds;
         if (countdownText != null) countdownText.text = "-";
+        if (isLocalPlayerHost) SetStartButtonVisual(false);
         Debug.Log("[LobbyUI] Countdown sifirlandi.");
     }
 
+    /// <summary>BUG DUZELTMESI: Start Game butonunun gorselini (sprite + metin) countdown
+    /// durumuna gore degistirir. cancelMode=true -> kirmizi "Iptal", false -> mavi "Baslat".
+    /// Sprite referanslari atanmamissa sadece metin degisir (sessiz devam eder).</summary>
+    private void SetStartButtonVisual(bool cancelMode)
+    {
+        if (startGameButtonText != null) startGameButtonText.text = cancelMode ? "Iptal" : "Baslat";
+
+        if (startGameButtonImage != null)
+        {
+            if (cancelMode && startGameCancelSprite != null) startGameButtonImage.sprite = startGameCancelSprite;
+            else if (!cancelMode && startGameDefaultSprite != null) startGameButtonImage.sprite = startGameDefaultSprite;
+        }
+    }
+
+    /// <summary>BUG DUZELTMESI: host'un Start Game (veya Force Start Devam) ile countdown'u
+    /// fiilen baslattigi TEK ortak yol. Host henuz Ready basmamissa burada otomatik "Hazir"
+    /// yapilir (kullanici raporu: "başlaya basınca kendisi de otomatik olarak hazır olarak
+    /// görünsün"), sonra StartCountdownIfAllReady() cagrilir (bu da butonu Iptal'e cevirir).</summary>
+    private void BeginHostCountdown()
+    {
+        if (!isReady) SetLocalReady(true);
+        StartCountdownIfAllReady();
+    }
+
+    /// <summary>BUG DUZELTMESI: artik ucu de burada ele aliniyor:
+    /// (1) Host-only: isLocalPlayerHost degilse hicbir sey yapmaz (buton zaten Show() icinde
+    ///     non-host icin gizleniyor, bu ekstra bir guvenlik katmani).
+    /// (2) Countdown zaten calisiyorsa buton "Iptal" durumundadir - bu tiklama countdown'u
+    ///     durdurur, host'un otomatik-ready durumunu geri alir ve butonu "Baslat"a dondurur.
+    /// (3) Countdown calismiyorsa eski akis: solo->direkt baslat, herkes ready degilse
+    ///     Force Start modal, herkes ready ise direkt baslat - hepsi BeginHostCountdown()
+    ///     uzerinden gecer (otomatik ready + gorsel guncelleme tek yerden).</summary>
     private void OnStartGameClicked()
     {
-        // T48: Start Game basinca gercek oyuncu sayisi oku
+        if (!isLocalPlayerHost)
+        {
+            Debug.LogWarning("[LobbyUI] Start Game sadece lobiyi olusturan host tarafindan kullanilabilir.");
+            return;
+        }
+
+        if (isCountdownRunning)
+        {
+            ResetCountdown();
+            SetLocalReady(false);
+            Debug.Log("[LobbyUI] Start Game iptal edildi (host), countdown durduruldu.");
+            return;
+        }
+
         int playerCount = GetCurrentPlayerCount();
 
         // DUZELTME: Solo modda (playerCount==1) modal gosterme - direkt countdown
         if (playerCount == 1)
         {
             Debug.Log("[LobbyUI] Start Game (SOLO): tek oyuncu, modal yok, countdown direkt basliyor.");
-            StartCountdownIfAllReady();
+            BeginHostCountdown();
             return;
         }
 
         // Cok oyunculu modda: baslatici hariç geri kalan oyuncularin hazir/hazir olmama durumunu kontrol et
         // notReadyCount = (playerCount - 1) - readyCount
-        // Cunku baslatici kendisi hazir sayilir (butona bastigi icin)
+        // Cunku baslatici kendisi BeginHostCountdown() icinde otomatik hazir yapilacak
         int notReadyCount = (playerCount - 1) - readyCount;
 
         if (notReadyCount > 0)
@@ -449,7 +553,7 @@ private void UpdatePlaceholderSlots()
         else
         {
             Debug.Log("[LobbyUI] Start Game: herkes hazir, countdown modalsiz direkt basliyor.");
-            StartCountdownIfAllReady();
+            BeginHostCountdown();
         }
     }
 
@@ -473,18 +577,19 @@ private void UpdatePlaceholderSlots()
         Debug.Log("[LobbyUI] Force start modal acildi.");
     }
 
-    /// <summary>T48: [Devam] basilinca cagirilir. Modali kapatir, countdown'u 15sn'ye
-    /// sifirlayip T47'nin StartCountdownIfAllReady() ile otomatik baslatir.</summary>
+    /// <summary>T48: [Devam] basilinca cagirilir. Modali kapatir, BeginHostCountdown() ile
+    /// host'u otomatik ready yapip countdown'u 15sn'den baslatir (buton Iptal'e doner).</summary>
     private void OnForceStartConfirmed()
     {
         if (forceStartModalPanel != null) forceStartModalPanel.SetActive(false);
         ResetCountdown();
-        StartCountdownIfAllReady();
+        BeginHostCountdown();
         Debug.Log("[LobbyUI] Force start onaylandi (Devam), countdown 15sn'den basliyor.");
     }
 
     /// <summary>T48: [Geri] basilinca cagirilir. Modali kapatir, lobi beklemeye devam eder
-    /// (countdown'a dokunmaz).</summary>
+    /// (countdown'a dokunmaz, host henuz otomatik ready yapilmadigi icin geri alinacak bir
+    /// sey de yok).</summary>
     private void OnForceStartCancelled()
     {
         if (forceStartModalPanel != null) forceStartModalPanel.SetActive(false);

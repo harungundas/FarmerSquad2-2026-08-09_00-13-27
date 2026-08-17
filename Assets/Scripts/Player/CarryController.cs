@@ -31,7 +31,7 @@ public class CarryController : MonoBehaviour
     [Tooltip("E basili tutma suresi (saniye). HayPile.pickupHoldDuration=1 ile tutarli secildi.")]
     public float pickupHoldDuration = 1f;
     [Tooltip("Hayvanin bu mesafe icinde olmasi gerekir. HayCarryState.feedRange=2 ile tutarli.")]
-    public float carryRange = 2f;
+    public float carryRange = 12f;
 
     private PlayerController playerController;
     private Animator animator;
@@ -49,7 +49,7 @@ public class CarryController : MonoBehaviour
 
     private void Update()
     {
-        if (!playerController.IsOwner) return;
+        if (!playerController.IsOwner || !playerController.IsControllable.Value) return;
 
         var keyboard = Keyboard.current;
         if (keyboard == null) return;

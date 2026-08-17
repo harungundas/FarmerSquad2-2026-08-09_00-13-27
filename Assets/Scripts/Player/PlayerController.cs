@@ -16,6 +16,10 @@ public class PlayerController : NetworkBehaviour
     [Header("Character Data")]
     public CharacterClassData classData;
 
+    [Header("Ownership Gate (CharacterSelectionManager tarafindan yazilir)")]
+    [Tooltip("IsOwner tek basina yeterli DEGIL: host modunda, sunucuya ait (henuz kimseye atanmamis) sahne objelerinin OwnerClientId'si de 0'dir - host'un kendi LocalClientId'si de 0 oldugu icin IsOwner yanlislikla true doner. Bu yuzden CharacterSelectionManager, bir govdeyi bir client'a ATADIGI zaman bu bayragi acikca true yapar, biraktiginda false yapar.")]
+    public NetworkVariable<bool> IsControllable = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
     [Header("Feeding (T17 placeholder - tam mantik T18 HayCarryState.cs'de)")]
     public bool isCarryingHay = false;
 
@@ -39,11 +43,58 @@ public class PlayerController : NetworkBehaviour
     private Rigidbody rb;
     private Animator animator;
     private bool wasMovingWhileCarrying = false;
+    private Renderer[] bodyRenderers;
+    private Collider[] bodyColliders;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
+        bodyRenderers = GetComponentsInChildren<Renderer>(true);
+        bodyColliders = GetComponentsInChildren<Collider>(true);
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        // Bu govde henuz bir oyuncuya ATANMAMISSA (CharacterSelectionManager.IsControllable'i
+        // hala varsayilan false ise) haritada hareketsiz beklemesin - gorunmez ve carpismasiz
+        // kalsin, atandigi an (IsControllable=true) geri gorunur/carpisir hale gelsin.
+        ApplyBodyVisibility(IsControllable.Value);
+        IsControllable.OnValueChanged += OnControllableChanged;
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        IsControllable.OnValueChanged -= OnControllableChanged;
+    }
+
+    private void OnControllableChanged(bool previousValue, bool newValue)
+    {
+        ApplyBodyVisibility(newValue);
+    }
+
+    private void ApplyBodyVisibility(bool visible)
+    {
+        if (bodyRenderers != null)
+            foreach (var r in bodyRenderers) if (r != null) r.enabled = visible;
+
+        if (bodyColliders != null)
+            foreach (var c in bodyColliders) if (c != null) c.enabled = visible;
+
+        if (rb != null)
+        {
+            // Gorunmezken fizige tabi olmasin (dusmesin/itilmesin), gorunur olunca normal
+            // (yer cekimine tabi, non-kinematic) davranisina doner - Update()'teki linearVelocity
+            // kontrolu bunu zaten non-kinematic bekliyor.
+            rb.isKinematic = !visible;
+            if (visible == false)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+        }
+
+        if (animator != null) animator.enabled = visible;
     }
 
     private bool IsGrounded()
@@ -53,7 +104,7 @@ public class PlayerController : NetworkBehaviour
 
 private void Update()
     {
-        if (!IsOwner) return;
+        if (!IsOwner || !IsControllable.Value) return;
 
         var keyboard = UnityEngine.InputSystem.Keyboard.current;
         if (keyboard == null) return;

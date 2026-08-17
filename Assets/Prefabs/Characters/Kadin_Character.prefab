@@ -256,6 +256,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
   classData: {fileID: 11400000, guid: f1a62fe46240f1749aa8f4815a96fd9e, type: 2}
+  IsControllable:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   isCarryingHay: 0
   sprintMultiplier: 1.6
   pushSpeedMultiplier: 1
@@ -275,7 +280,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ca083b837920ea458d5fc9c87a54a11, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HayCarryState
-  feedRange: 2
+  feedRange: 12
 --- !u!114 &6355791302706903271
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -289,4 +294,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarryController
   pickupHoldDuration: 1
-  carryRange: 2
+  carryRange: 12

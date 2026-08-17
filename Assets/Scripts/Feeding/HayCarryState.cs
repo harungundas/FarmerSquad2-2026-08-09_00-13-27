@@ -22,7 +22,7 @@ public class HayCarryState : MonoBehaviour
 {
     [Header("Besleme Ayarlari")]
     [Tooltip("Hayvanin bu mesafe icinde olmasi gerekir (metre). Sayisal deger GDD'de verilmemis, HayPile.cs'deki triggerRadius=2 ile tutarli secildi.")]
-    public float feedRange = 2f;
+    public float feedRange = 12f;
 
     private PlayerController playerController;
     private AnimalBase targetAnimal;
@@ -35,7 +35,7 @@ public class HayCarryState : MonoBehaviour
 
     private void Update()
     {
-        if (!playerController.IsOwner) return;
+        if (!playerController.IsOwner || !playerController.IsControllable.Value) return;
 
         if (!playerController.isCarryingHay)
         {

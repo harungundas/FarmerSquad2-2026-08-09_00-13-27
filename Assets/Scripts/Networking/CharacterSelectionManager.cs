@@ -179,6 +179,13 @@ public class CharacterSelectionManager : NetworkBehaviour
             body = instance;
         }
 
+        // Host-mode guvenlik notu: sunucuya ait (henuz atanmamis) sahne objelerinin
+        // OwnerClientId'si de 0'dir, host'un kendi LocalClientId'si de 0 - IsOwner TEK
+        // BASINA guvenilmez. Bu yuzden govde gercekten bu client'a devredilirken
+        // PlayerController.IsControllable acikca true yapiliyor (Update() bunu kontrol eder).
+        var assignedPc = body.GetComponent<PlayerController>();
+        if (assignedPc != null) assignedPc.IsControllable.Value = true;
+
         bodyByClient[clientId] = body;
     }
 
@@ -195,6 +202,11 @@ public class CharacterSelectionManager : NetworkBehaviour
 
         int templateIndex = System.Array.FindIndex(characterNetworkObjects, t => t != null && t.gameObject == body);
         var netObj = body.GetComponent<NetworkObject>();
+
+        // Govde birakilirken kontrol yetkisi de acikca kapatilir - aksi halde sablon sunucuya
+        // geri dondugunde IsControllable=true takili kalir ve host-mode'da yeniden kontrol edilebilir olur.
+        var releasedPc = body.GetComponent<PlayerController>();
+        if (releasedPc != null) releasedPc.IsControllable.Value = false;
 
         if (templateIndex >= 0)
         {

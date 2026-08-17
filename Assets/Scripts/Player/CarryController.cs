@@ -15,8 +15,8 @@ using UnityEngine.InputSystem;
 /// icin Inek/At dahil her hayvan 1 adet tasinabilir).
 ///
 /// E tusu davranisi baglam-duyarlidir: yakinda alinabilecek (kapasite dolu degilse) bir
-/// hayvan varsa E BASILI TUTMAK (pickupHoldDuration) alma islemidir; aksi halde (kapasite
-/// dolu veya yakinda uygun hayvan yoksa) TEK E BASISI tum tasinan hayvanlari birakir.
+/// hayvan varsa TEK E BASISI alma islemidir; aksi halde (kapasite dolu veya yakinda uygun
+/// hayvan yoksa) TEK E BASISI tum tasinan hayvanlari birakir.
 ///
 /// Deviation (dokumante edilmis basitlestirme, HayPile/HayCarryState ile tutarli): Hayvanin
 /// tasima sirasinda transform.SetParent ile karaktere baglanmasi SADECE LOCAL/sahne-ici bir
@@ -28,15 +28,12 @@ using UnityEngine.InputSystem;
 public class CarryController : MonoBehaviour
 {
     [Header("Tasima Ayarlari")]
-    [Tooltip("E basili tutma suresi (saniye). HayPile.pickupHoldDuration=1 ile tutarli secildi.")]
-    public float pickupHoldDuration = 1f;
     [Tooltip("Hayvanin bu mesafe icinde olmasi gerekir. HayCarryState.feedRange=2 ile tutarli.")]
     public float carryRange = 12f;
 
     private PlayerController playerController;
     private Animator animator;
     private readonly List<AnimalBase> carriedAnimals = new List<AnimalBase>();
-    private float holdTimer = 0f;
 
     // Tasinan hayvanlar icin basit yerlesim noktalari (sirt/on, Sisman'in 2 hafif hayvani icin yan yana).
     private static readonly Vector3[] CarryOffsets = { new Vector3(-0.3f, 1.3f, 0.4f), new Vector3(0.3f, 1.3f, 0.4f) };
@@ -46,6 +43,10 @@ public class CarryController : MonoBehaviour
         playerController = GetComponent<PlayerController>();
         animator = GetComponent<Animator>();
     }
+
+    // DEBUG (tasima sorunu teshisi icin eklendi): bir onceki frame'de bulunan hedef, sadece
+    // DEGISTIGINDE log basmak icin - her frame log spam'i yapmamak amacli.
+    private AnimalBase lastLoggedNearest = null;
 
     private void Update()
     {
@@ -58,28 +59,43 @@ public class CarryController : MonoBehaviour
         bool isFull = carriedAnimals.Count >= capacity;
         AnimalBase nearest = isFull ? null : FindNearestCarryableAnimal(capacity);
 
+        // DEBUG: hedef degistiginde (yakinda tasinabilir hayvan var/yok oldu) logla.
+        if (nearest != lastLoggedNearest)
+        {
+            if (nearest != null)
+                Debug.Log("[CarryController] " + gameObject.name + " - yakinda tasinabilir hayvan bulundu: " + nearest.gameObject.name +
+                           " (mesafe: " + Vector3.Distance(transform.position, nearest.transform.position).ToString("0.00") + "m, carryRange: " + carryRange + "m)");
+            else
+                Debug.Log("[CarryController] " + gameObject.name + " - yakinda tasinabilir hayvan YOK (isFull: " + isFull + ", capacity: " + capacity + "/" + carriedAnimals.Count + ")");
+            lastLoggedNearest = nearest;
+        }
+
+        // Etkilesim ipucu: sadece bu objenin sahibi (local player) icin goster.
+        if (InteractionPromptUI.Instance != null)
+        {
+            if (nearest != null) InteractionPromptUI.Instance.Show("E - Taşı");
+            else if (carriedAnimals.Count == 0) InteractionPromptUI.Instance.Hide();
+            // not: carriedAnimals.Count > 0 && nearest == null durumunda asagidaki Drop mantigi
+            // calisir, prompt'u "E - Birak" olarak guncellemek istersen buraya eklenebilir (T-sonrasi).
+        }
+
         if (nearest != null)
         {
-            if (keyboard.eKey.isPressed)
+            if (keyboard.eKey.wasPressedThisFrame)
             {
-                holdTimer += Time.deltaTime;
-                if (holdTimer >= pickupHoldDuration)
-                {
-                    PickUp(nearest);
-                    holdTimer = 0f;
-                }
+                PickUp(nearest);
+            }
+        }
+        else if (keyboard.eKey.wasPressedThisFrame)
+        {
+            // DEBUG: E'ye basildi ama hicbir sey olmuyorsa SEBEBI burada gorunur.
+            if (carriedAnimals.Count > 0)
+            {
+                DropAll();
             }
             else
             {
-                holdTimer = 0f;
-            }
-        }
-        else
-        {
-            holdTimer = 0f;
-            if (carriedAnimals.Count > 0 && keyboard.eKey.wasPressedThisFrame)
-            {
-                DropAll();
+                Debug.Log("[CarryController] " + gameObject.name + " - E basildi ama tasinacak hayvan yok ve elde de hayvan yok (yapilacak bir sey yok).");
             }
         }
     }
@@ -119,6 +135,14 @@ public class CarryController : MonoBehaviour
         animal.transform.localPosition = CarryOffsets[Mathf.Min(slot, CarryOffsets.Length - 1)];
         animal.transform.localRotation = Quaternion.identity;
 
+        // Bug fix: AnimalIdleWander (T43) her frame transform.position'i (world-space, parent'tan
+        // BAGIMSIZ) agil sinirlari icindeki rastgele bir hedefe dogru degistiriyordu. Bu, yukaridaki
+        // SetParent/localPosition ile CELISIYOR - tasinan hayvan karakterin sirtindan surekli padoktaki
+        // hedef noktaya "kayiyor", tasima gorsel olarak calismiyor gibi gorunuyordu. Tasinirken bu
+        // dekoratif katman devre disi birakilir (DropAll() icinde geri acilir).
+        var wander = animal.GetComponent<AnimalIdleWander>();
+        if (wander != null) wander.enabled = false;
+
         var rb = animal.GetComponent<Rigidbody>();
         if (rb != null) rb.isKinematic = true;
 
@@ -141,6 +165,9 @@ public class CarryController : MonoBehaviour
 
             var rb = animal.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = false;
+
+            var wander = animal.GetComponent<AnimalIdleWander>();
+            if (wander != null) wander.enabled = true;
         }
 
         Debug.Log("[CarryController] " + gameObject.name + " " + carriedAnimals.Count + " hayvani birakti.");

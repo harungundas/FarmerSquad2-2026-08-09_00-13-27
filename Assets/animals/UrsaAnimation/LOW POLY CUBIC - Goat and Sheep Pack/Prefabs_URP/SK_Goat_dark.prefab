@@ -3680,7 +3680,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4026167085268298943}
   - component: {fileID: 4026167085268298928}
-  - component: {fileID: 4026167085268298929}
   - component: {fileID: 6916722922043001796}
   - component: {fileID: 1323413076785965341}
   - component: {fileID: 7763147352554060849}
@@ -3733,27 +3732,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &4026167085268298929
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4026167085268298930}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7e5010bff315c6e4c8a413f69e3d6458, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  animator: {fileID: 0}
-  walkForwardAnimation: walk_forward
-  walkBackwardAnimation: walk_backwards
-  runForwardAnimation: run_forward
-  turn90LAnimation: turn_90_L
-  turn90RAnimation: turn_90_R
-  trotAnimation: trot_forward
-  sittostandAnimation: sit_to_stand
-  standtositAnimation: stand_to_sit
 --- !u!114 &6916722922043001796
 MonoBehaviour:
   m_ObjectHideFlags: 0

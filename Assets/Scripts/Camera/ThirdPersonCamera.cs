@@ -26,7 +26,7 @@ public class ThirdPersonCamera : MonoBehaviour
         var controllers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
         foreach (var pc in controllers)
         {
-            if (pc.IsOwner)
+            if (pc.IsOwner && pc.IsControllable.Value)
             {
                 vcam.Follow = pc.transform;
                 vcam.LookAt = pc.transform;

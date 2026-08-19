@@ -651,8 +651,6 @@ GameObject:
   - component: {fileID: 4483999970917742656}
   - component: {fileID: 3851015956068934398}
   - component: {fileID: 3851015956068934393}
-  - component: {fileID: 3851015956068934392}
-  - component: {fileID: 3851015956068934395}
   - component: {fileID: 9207567914833343168}
   - component: {fileID: 8864793445104432261}
   - component: {fileID: 8806639329013416785}
@@ -715,8 +713,8 @@ Animator:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3851015956068934394}
   m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 3677ca4e9421f2146bce7bec13d42320, type: 2}
+  m_Avatar: {fileID: 9000000, guid: 33246b64c1371e444b73335f655fc158, type: 3}
+  m_Controller: {fileID: 9100000, guid: 3c25314fff54a284590a7c58faf87bdf, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -728,50 +726,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &3851015956068934392
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3851015956068934394}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: be2f4aa750c530144bd7219a00354c98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_WalkSpeed: 1
-  m_RunSpeed: 4
-  m_RotateSpeed: 245
-  m_Space: 1
-  m_JumpHeight: 5
-  m_VerticalID: Vert
-  m_StateID: State
-  m_LookWeight:
-    weight: 1
-    body: 0.3
-    head: 0.7
-    eyes: 1
---- !u!114 &3851015956068934395
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3851015956068934394}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b2c67ce836140b4479603ebcf944cddd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_HorizontalAxis: Horizontal
-  m_VerticalAxis: Vertical
-  m_JumpButton: Jump
-  m_RunKey: 304
-  m_Camera: {fileID: 0}
-  m_MouseX: Mouse X
-  m_MouseY: Mouse Y
-  m_MouseScroll: Mouse ScrollWheel
 --- !u!114 &9207567914833343168
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -788,6 +742,7 @@ MonoBehaviour:
   animalData: {fileID: 11400000, guid: 7d445a8b21819af4cad01c34f5e6122a, type: 2}
   ownerPen: {fileID: 0}
   hunger: 100
+  IsBeingCarried: 0
 --- !u!114 &8864793445104432261
 MonoBehaviour:
   m_ObjectHideFlags: 0

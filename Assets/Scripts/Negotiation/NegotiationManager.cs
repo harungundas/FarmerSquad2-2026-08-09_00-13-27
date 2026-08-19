@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 
@@ -44,6 +45,8 @@ public class NegotiationManager : NetworkBehaviour
     public VehicleSpawner vehicleSpawner;
     [Tooltip("RequestFinalizeDeliveryServerRpc, teslimatin dogru/yanlis oldugunu buradan okur (T16).")]
     public DeliveryZoneDetector deliveryZoneDetector;
+    [Tooltip("Basarili SATIS teslimatinda stogun (citler'daki) azaltilmasi icin. 'citler' objesindeki PenManager elle atanmali.")]
+    public PenManager penManager;
     [Tooltip("T29: Satis/Alim para hareketleri buradan islenir.")]
     public WalletManager walletManager;
     [Tooltip("T35: Satis teslimat sonucu (basarili/hatali) buraya bildirilir. Alim sinyal GONDERMEZ - bkz. PrestigeManager.cs sinif yorumu.")]
@@ -254,7 +257,7 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
     /// T29: basariliysa WalletManager.AddBalanceServerRpc(finalOffer) cagrilir (Satis = para gelir).
     /// Basarisizsa para hareketi yok (Prestij -0.25, T35 baglaninca).
     /// </summary>
-    [ServerRpc(RequireOwnership = false)]
+[ServerRpc(RequireOwnership = false)]
     public void RequestFinalizeDeliveryServerRpc(ServerRpcParams rpcParams = default)
     {
         var s = State.Value;
@@ -284,6 +287,24 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
         {
             ProcessPayment(s);
             if (gameStatsTracker != null) gameStatsTracker.ReportSaleServer(s.count, s.finalOffer);
+
+            // T27 (eksikti, bu duzeltmede eklendi): basarili SATIS teslimatinda hayvanlar
+            // teslimat alanindan gercekten kaldirilmali (yoksa oyuncuda/haritada kalip tekrar
+            // kullanilabiliyordu) ve citler'daki PenManager stogu dusurulmeli.
+            RemoveDeliveredAnimals(s);
+            if (penManager != null)
+            {
+                bool removedFromStock = penManager.RemoveStock(s.species, s.count);
+                if (!removedFromStock)
+                {
+                    Debug.LogWarning("[NegotiationManager] PenManager stogu " + s.species + " icin " + s.count + " kadar dusurulemedi (stok yetersiz/tutarsiz olabilir).");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[NegotiationManager] penManager atanmamis, satis sonrasi agil stogu dusurulemedi.");
+            }
+
             Debug.Log("[NegotiationManager] Dogru teslimat! " + s.count + "x " + s.species + " (" + s.direction + ") " + s.finalOffer + "$ WalletManager'a islendi.");
         }
         else
@@ -308,6 +329,46 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
         State.Value = s;
         ConcludeDealAndReset();
     }
+
+/// <summary>
+    /// T27 duzeltmesi: basarili SATIS teslimatinda, teslimat alanindaki (deliveryZoneDetector)
+    /// siparisin turune uyan tam s.count kadar hayvani sahneden kaldirir (NetworkObject.Despawn
+    /// ile - networked degilse duz Destroy). DeliveryZoneDetector'in ic listesinden de elle
+    /// cikartir (ClearAnimal) - yoksa Destroy sonrasi OnTriggerExit tetiklenmeyebilir ve liste
+    /// bozuk kalir.
+    /// </summary>
+    private void RemoveDeliveredAnimals(NegotiationState s)
+    {
+        if (deliveryZoneDetector == null) return;
+
+        var inside = new List<AnimalBase>(deliveryZoneDetector.AnimalsInside);
+        int removed = 0;
+        foreach (var animal in inside)
+        {
+            if (removed >= s.count) break;
+            if (animal == null) continue;
+            if (animal.animalData == null || animal.animalData.species != s.species) continue;
+
+            deliveryZoneDetector.ClearAnimal(animal);
+
+            var netObj = animal.GetComponent<NetworkObject>();
+            if (netObj != null && netObj.IsSpawned)
+            {
+                netObj.Despawn(true);
+            }
+            else
+            {
+                Destroy(animal.gameObject);
+            }
+            removed++;
+        }
+
+        if (removed < s.count)
+        {
+            Debug.LogWarning("[NegotiationManager] RemoveDeliveredAnimals: beklenen " + s.count + ", kaldirilan " + removed + " (" + s.species + ").");
+        }
+    }
+
 
     /// <summary>
     /// Pazarligi Inactive durumuna sifirlar. Normal akiste artik gerekmiyor (ConcludeDealAndReset

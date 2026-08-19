@@ -52,6 +52,15 @@ public class AnimalIdleWander : NetworkBehaviour
             return;
         }
 
+        // BUG DUZELTMESI: hayvan bir oyuncu tarafindan tasiniyorsa (CarryController.PickUp)
+        // burasi HICBIR SEY yapmamali - aksi halde 'Moving' durumundaki bir hayvan, tasiniyor
+        // olsa bile kendi agil-ici hedef noktasina yurumeye devam ediyordu, bu da CarryController'in
+        // her frame ayarladigi parent-offset pozisyonunu eziyordu ("elim bos, tavuk yerde kaldi" bug'i).
+        if (animalBase.IsBeingCarried)
+        {
+            return;
+        }
+
         switch (state)
         {
             case WanderState.Waiting:

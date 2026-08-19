@@ -85,9 +85,19 @@ public class MainMenuController : MonoBehaviour
     [Header("Ayarlar (opsiyonel - SettingsUI T42'de kurulacak, henuz YOK)")]
     [SerializeField] private GameObject settingsPanelRoot;
 
-    private void Awake()
+private void Awake()
     {
         if (panelRoot != null) panelRoot.SetActive(true);
+
+        // BUG DUZELTMESI (kullanici raporu): LobbyCanvas/Panel sahnede yanlislikla aktif
+        // kaydedilmisti, bu da oyun Ana Menu'deyken Lobi ekraninin gorunmesine ve Ayarlar dahil
+        // diger panellerin ustunu kapatmasina neden oluyordu. Sahne dosyasinin kaydedilmis
+        // aktiflik durumuna guvenmek yerine, Ana Menu acilirken diger tum ust-seviye ekranlarin
+        // KAPALI oldugu burada da ayrica garanti edilir (LobbyUI/SettingsUI kendi Awake'lerinde
+        // de kendilerini kapatiyor - bu ekstra bir savunma katmani, T40/T41/T42 arasi sira
+        // garantisi olmadigi icin).
+        if (lobbyUI != null) lobbyUI.Hide();
+        if (settingsPanelRoot != null) settingsPanelRoot.SetActive(false);
 
         if (createLobbyButton != null) createLobbyButton.onClick.AddListener(OnCreateLobbyClicked);
         if (joinLobbyButton != null) joinLobbyButton.onClick.AddListener(OnJoinLobbyClicked);

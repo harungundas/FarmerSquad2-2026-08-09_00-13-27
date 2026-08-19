@@ -139,6 +139,7 @@ private void Update()
                 camForward.Normalize();
                 camRight.Normalize();
                 moveDir = camForward * v + camRight * h;
+                moveDir.Normalize(); // DUZELTME: caprazda (h=1,v=1) normalize edilmeden uzunluk sqrt(2) oluyordu, hiz %41 fazlaydi.
             }
             else
             {

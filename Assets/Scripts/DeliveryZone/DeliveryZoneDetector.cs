@@ -5,30 +5,22 @@ using UnityEngine;
 /// hayvan_birakma_alani objesindeki mevcut BoxCollider (trigger) uzerinden,
 /// teslimat alaninin icinde hangi hayvanlarin (AnimalBase) bulundugunu takip eder.
 /// Beklenen siparis turu henuz yok (Faz 5'te OrderData ile baglanacak) - simdilik
-/// sadece icerideki hayvanlari tespit eder (Debug.Log) ve basit bir renk feedback'i
-/// gosterir (yesil = alanda en az 1 hayvan var, orijinal renk = bos).
+/// sadece icerideki hayvanlari tespit eder (Debug.Log).
+///
+/// DEGISIKLIK (kullanici karari): dolu/bos renk feedback'i (yesil/orijinal) KALDIRILDI -
+/// dogru/yanlis teslimat gorseli ileride ayri bir sistemde (DeliveryResolver, T27 - henuz
+/// yazilmadi) ele alinacak. Zone materyali artik sabit kalir, doluluk durumuna gore
+/// degismez. Materyal: Assets/Materials/DeliveryZone_Overlay.mat (PP_Water'dan kopyalanip
+/// ayristirildi - orijinal Nature Pack su materyaline dokunulmadi, alpha=0.18 ile icerideki
+/// hayvan daha net gorunsun diye ekstra seffaf yapildi).
 /// </summary>
 [RequireComponent(typeof(BoxCollider))]
 public class DeliveryZoneDetector : MonoBehaviour
 {
-    [Header("Feedback")]
-    public Color occupiedColor = Color.green;
-
     private readonly List<AnimalBase> animalsInside = new List<AnimalBase>();
-    private Renderer zoneRenderer;
-    private Color emptyColor;
 
-    /// <summary>Su anda alanin icindeki hayvanlarin salt-okunur listesi (T27 DeliveryResolver bunu okuyacak).</summary>
+    /// <summary>Su anda alanin icindeki hayvanlarin salt-okunur listesi (DeliveryResolver bunu okuyacak).</summary>
     public IReadOnlyList<AnimalBase> AnimalsInside => animalsInside;
-
-    private void Awake()
-    {
-        zoneRenderer = GetComponent<Renderer>();
-        if (zoneRenderer != null)
-        {
-            emptyColor = zoneRenderer.material.color;
-        }
-    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -41,8 +33,6 @@ public class DeliveryZoneDetector : MonoBehaviour
             AnimalSpecies species = animal.animalData != null ? animal.animalData.species : default;
             Debug.Log("[DeliveryZoneDetector] Teslimat alanina girdi: " + species);
         }
-
-        UpdateFeedback();
     }
 
     private void OnTriggerExit(Collider other)
@@ -55,13 +45,16 @@ public class DeliveryZoneDetector : MonoBehaviour
             AnimalSpecies species = animal.animalData != null ? animal.animalData.species : default;
             Debug.Log("[DeliveryZoneDetector] Teslimat alanindan cikti: " + species);
         }
-
-        UpdateFeedback();
     }
 
-    private void UpdateFeedback()
+
+/// <summary>
+    /// NegotiationManager (T27 duzeltmesi) basarili teslimat sonrasi hayvani Destroy/Despawn
+    /// etmeden ONCE bunu cagirir - OnTriggerExit, obje yok edildiginde HER ZAMAN guvenilir
+    /// tetiklenmeyebildigi icin listeden elle cikartma garantisi saglar.
+    /// </summary>
+    public void ClearAnimal(AnimalBase animal)
     {
-        if (zoneRenderer == null) return;
-        zoneRenderer.material.color = animalsInside.Count > 0 ? occupiedColor : emptyColor;
+        animalsInside.Remove(animal);
     }
 }

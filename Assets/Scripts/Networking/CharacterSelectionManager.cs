@@ -111,7 +111,7 @@ public class CharacterSelectionManager : NetworkBehaviour
 
     /// <summary>UI, secim butonuna tiklaninca cagirir. Ayni karakter birden fazla client
     /// tarafindan secilebilir - baskasinin secmis olmasi artik REDDETME sebebi degil.</summary>
-    [ServerRpc(RequireOwnership = false)]
+[ServerRpc(RequireOwnership = false)]
     public void RequestSelectCharacterServerRpc(int characterIndex, ServerRpcParams rpcParams = default)
     {
         if (characterIndex < 0 || characterIndex >= CharacterCount)
@@ -128,7 +128,13 @@ public class CharacterSelectionManager : NetworkBehaviour
             return;
         }
 
-        if (GetSlotCharacter(slot) == characterIndex) return; // zaten bu karakter secili, no-op
+        Debug.Log("[CharacterSelectionManager] client" + requestingClientId + " karakter secimi istedi: index " + characterIndex + " (slot " + slot + ")");
+
+        if (GetSlotCharacter(slot) == characterIndex)
+        {
+            Debug.Log("[CharacterSelectionManager] client" + requestingClientId + " zaten bu karakteri (index " + characterIndex + ") secmis durumda, no-op.");
+            return; // zaten bu karakter secili, no-op
+        }
 
         ReleaseBody(requestingClientId);
         SetSlotCharacter(slot, characterIndex);
@@ -185,6 +191,8 @@ public class CharacterSelectionManager : NetworkBehaviour
         // PlayerController.IsControllable acikca true yapiliyor (Update() bunu kontrol eder).
         var assignedPc = body.GetComponent<PlayerController>();
         if (assignedPc != null) assignedPc.IsControllable.Value = true;
+
+        Debug.Log("[CharacterSelectionManager] client" + clientId + " icin govde atandi -> karakter index " + characterIndex + " (" + body.name + ")");
 
         bodyByClient[clientId] = body;
     }

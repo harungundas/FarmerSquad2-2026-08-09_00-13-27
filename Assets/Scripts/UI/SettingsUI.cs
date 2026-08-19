@@ -46,8 +46,13 @@ public class SettingsUI : MonoBehaviour
 
     private Resolution[] availableResolutions;
 
-    private void Awake()
+private void Awake()
     {
+        // BUG DUZELTMESI (kullanici raporu): baska panellerin (orn. LobbyCanvas) sahnede
+        // yanlislikla aktif kaydedilmesi, bu panelin de kendi baslangic gorunurlugune
+        // guvenilemeyecegini gosterdi. Awake artik kendi kapaliligini garanti eder.
+        if (panelRoot != null) panelRoot.SetActive(false);
+
         if (sesTabButton != null) sesTabButton.onClick.AddListener(OnSesTabClicked);
         if (gorselTabButton != null) gorselTabButton.onClick.AddListener(OnGorselTabClicked);
         if (kontrollerTabButton != null) kontrollerTabButton.onClick.AddListener(OnKontrollerTabClicked);

@@ -15,7 +15,7 @@ using UnityEngine.InputSystem;
 /// icin Inek/At dahil her hayvan 1 adet tasinabilir).
 ///
 /// E tusu davranisi baglam-duyarlidir: yakinda alinabilecek (kapasite dolu degilse) bir
-/// hayvan varsa E BASILI TUTMAK (pickupHoldDuration) alma islemidir; aksi halde (kapasite
+/// hayvan varsa TEK E BASISI (basili tutmaya GEREK YOK) alma islemidir; aksi halde (kapasite
 /// dolu veya yakinda uygun hayvan yoksa) TEK E BASISI tum tasinan hayvanlari birakir.
 ///
 /// Deviation (dokumante edilmis basitlestirme, HayPile/HayCarryState ile tutarli): Hayvanin
@@ -28,18 +28,23 @@ using UnityEngine.InputSystem;
 public class CarryController : MonoBehaviour
 {
     [Header("Tasima Ayarlari")]
-    [Tooltip("E basili tutma suresi (saniye). HayPile.pickupHoldDuration=1 ile tutarli secildi.")]
-    public float pickupHoldDuration = 1f;
     [Tooltip("Hayvanin bu mesafe icinde olmasi gerekir. HayCarryState.feedRange=2 ile tutarli.")]
     public float carryRange = 12f;
 
     private PlayerController playerController;
     private Animator animator;
     private readonly List<AnimalBase> carriedAnimals = new List<AnimalBase>();
-    private float holdTimer = 0f;
+    
 
-    // Tasinan hayvanlar icin basit yerlesim noktalari (sirt/on, Sisman'in 2 hafif hayvani icin yan yana).
-    private static readonly Vector3[] CarryOffsets = { new Vector3(-0.3f, 1.3f, 0.4f), new Vector3(0.3f, 1.3f, 0.4f) };
+    // Tasima yerlesimi (kullanici karari):
+    // - Sisman DISI karakterler (kapasite=1): tasidiklari TEK hayvan karakterin SAGINA bakar.
+    // - Sisman (kapasite=2): iki hayvan da ONE bakar, sanki iki kolun altinda tasiniyormus gibi
+    //   hafifce sagda/solda durur. Sira HER ZAMAN ayni: ilk alinan hayvan (slot 0) SAG kola,
+    //   ikinci alinan hayvan (slot 1) SOL kola gelir (carriedAnimals listesine ekleme sirasiyla
+    //   birebir eslesir, bu yuzden sira degismez).
+    private static readonly Vector3 SingleCarryOffset = new Vector3(0.25f, 1.3f, 0.3f);
+    private static readonly Vector3[] TwoCarryOffsets = { new Vector3(0.3f, 1.2f, 0.5f), new Vector3(-0.3f, 1.2f, 0.5f) };
+    private static readonly Quaternion SingleCarryRotationOffset = Quaternion.Euler(0f, 90f, 0f); // saga bakar
 
     private void Awake()
     {
@@ -47,7 +52,7 @@ public class CarryController : MonoBehaviour
         animator = GetComponent<Animator>();
     }
 
-    private void Update()
+private void Update()
     {
         if (!playerController.IsOwner || !playerController.IsControllable.Value) return;
 
@@ -58,29 +63,18 @@ public class CarryController : MonoBehaviour
         bool isFull = carriedAnimals.Count >= capacity;
         AnimalBase nearest = isFull ? null : FindNearestCarryableAnimal(capacity);
 
+        // BUG DUZELTMESI (kullanici karari): eskiden E BASILI TUTMAK gerekiyordu (pickupHoldDuration).
+        // Artik TEK E BASISI yeterli - hem alma hem birakma icin wasPressedThisFrame kullanilir.
         if (nearest != null)
         {
-            if (keyboard.eKey.isPressed)
+            if (keyboard.eKey.wasPressedThisFrame)
             {
-                holdTimer += Time.deltaTime;
-                if (holdTimer >= pickupHoldDuration)
-                {
-                    PickUp(nearest);
-                    holdTimer = 0f;
-                }
-            }
-            else
-            {
-                holdTimer = 0f;
+                PickUp(nearest);
             }
         }
-        else
+        else if (carriedAnimals.Count > 0 && keyboard.eKey.wasPressedThisFrame)
         {
-            holdTimer = 0f;
-            if (carriedAnimals.Count > 0 && keyboard.eKey.wasPressedThisFrame)
-            {
-                DropAll();
-            }
+            DropAll();
         }
     }
 
@@ -110,25 +104,72 @@ public class CarryController : MonoBehaviour
         return nearest;
     }
 
-    private void PickUp(AnimalBase animal)
+private void PickUp(AnimalBase animal)
     {
         int slot = carriedAnimals.Count;
         carriedAnimals.Add(animal);
 
+        // BUG DUZELTMESI: AnimalIdleWander bu bayragi gorunce kendi hareketini durdurur -
+        // aksi halde asagidaki SetParent/localPosition atamasi her frame ezilip hayvan
+        // gorunurde eski yerinde kalmaya devam ediyordu.
+        animal.IsBeingCarried = true;
+
         animal.transform.SetParent(transform);
-        animal.transform.localPosition = CarryOffsets[Mathf.Min(slot, CarryOffsets.Length - 1)];
-        animal.transform.localRotation = Quaternion.identity;
+
+        // BUG DUZELTMESI: eskiden buraya "animal.transform.localPosition = CarryOffsets[...]"
+        // yaziliyordu. Bu LOCAL bir deger oldugu icin karakterin transform.localScale'ine
+        // (orn. 0.08) BOLUNEREK yorumlaniyordu - yani 1.3 birimlik "sirtta tasima" ofseti
+        // gercek dunyada sadece ~0.1m'ye denk geliyordu, hayvan neredeyse karakterin ayaklarinin
+        // icinde/zeminin altinda kalip gorunmez oluyordu (bazi govde kopyalarinda ise TERSI olup
+        // haritada uzaga savruluyordu - govde/prefab olcegi 0.08'den FARKLIYSA ayni sayilar cok
+        // buyuk bir dunya-uzayi ofsetine karsilik geliyordu). Duzeltme: ofseti karakterin KENDI
+        // yon vektorleriyle (right/up/forward - bunlar olcekten BAGIMSIZDIR) DUNYA UZAYINDA
+        // hesaplayip animal.transform.position'a dogrudan world-space olarak yaziyoruz. Boylece
+        // sonuc, karakterin scale'i ne olursa olsun (0.08, 1, veya baska bir govde kopyasinda
+        // farkli bir deger) HER ZAMAN ayni gercek-dunya mesafesinde (~0.3-1.3m) kalir.
+        int capacityForRotation = playerController.classData != null ? playerController.classData.carryCapacityLight : 1;
+        bool isTwoCarry = capacityForRotation > 1; // sadece Sisman
+
+        Vector3 offsetLocal;
+        Quaternion rotationOffset;
+        if (isTwoCarry)
+        {
+            offsetLocal = TwoCarryOffsets[Mathf.Min(slot, TwoCarryOffsets.Length - 1)];
+            rotationOffset = Quaternion.identity; // Sisman'da hayvanlar ONE bakar
+        }
+        else
+        {
+            offsetLocal = SingleCarryOffset;
+            rotationOffset = SingleCarryRotationOffset; // digger karakterlerde hayvan SAGA bakar
+        }
+
+        Vector3 worldOffset = transform.right * offsetLocal.x + transform.up * offsetLocal.y + transform.forward * offsetLocal.z;
+        animal.transform.position = transform.position + worldOffset;
+        animal.transform.rotation = transform.rotation * rotationOffset;
 
         var rb = animal.GetComponent<Rigidbody>();
-        if (rb != null) rb.isKinematic = true;
+        if (rb != null)
+        {
+            // BUG DUZELTMESI: hayvan sirtlanmadan once fizik motorundan kalma bir hiz (velocity)
+            // tasiyor olabilirdi (dusme, itilme, vb.) - bu hiz Rigidbody.isKinematic=true iken
+            // gizli kaliyor ve DropAll()'da isKinematic=false yapilinca aninda geri uygulaniyordu,
+            // bu da "birakilan hayvanin yavasca ucarak uzaklasmasi" bug'ina sebep oluyordu.
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+
+        var controller = animal.GetComponent<CharacterController>();
+        if (controller != null) controller.enabled = false;
 
         if (animator != null) animator.SetBool("IsCarrying", true);
 
         Debug.Log("[CarryController] " + gameObject.name + " hayvani sirtladi: " + animal.gameObject.name +
-                   " (" + carriedAnimals.Count + "/" + (playerController.classData != null ? playerController.classData.carryCapacityLight : 1) + ")");
+                   " (" + carriedAnimals.Count + "/" + (playerController.classData != null ? playerController.classData.carryCapacityLight : 1) + ")" +
+                   " localPos=" + animal.transform.localPosition + " worldPos=" + animal.transform.position);
     }
 
-    private void DropAll()
+private void DropAll()
     {
         for (int i = 0; i < carriedAnimals.Count; i++)
         {
@@ -140,7 +181,22 @@ public class CarryController : MonoBehaviour
             animal.transform.position = transform.position + dropOffset;
 
             var rb = animal.GetComponent<Rigidbody>();
-            if (rb != null) rb.isKinematic = false;
+            if (rb != null)
+            {
+                // BUG DUZELTMESI: fizigi tekrar acmadan ONCE hizi acikca sifirla - PickUp() sirasinda
+                // zaten sifirlanmisti ama tasima boyunca kinematik govdeye disaridan (orn. baska bir
+                // carpismadan) bir hiz sizmis olabilir; guvenli taraf sifirdan baslatmak.
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = false;
+            }
+
+            var controller = animal.GetComponent<CharacterController>();
+            if (controller != null) controller.enabled = true;
+
+            animal.IsBeingCarried = false;
+
+            Debug.Log("[CarryController] birakildi: " + animal.gameObject.name + " worldPos=" + animal.transform.position);
         }
 
         Debug.Log("[CarryController] " + gameObject.name + " " + carriedAnimals.Count + " hayvani birakti.");

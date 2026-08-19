@@ -139,24 +139,34 @@ public class HUDController : MonoBehaviour
         dayQuotaText.text = "Gün: " + currentDay + " / 18\nKota Günü: " + nextQuotaDay;
     }
 
-    private void RefreshTimer()
+private void RefreshTimer()
     {
         if (dayCycleManager == null) return;
 
+        // DEGISIKLIK (kullanici karari): ham "X sn" sayaci yerine, 240sn'lik musteri gelisi
+        // penceresini 06:00-18:00 arasi 12 oyun-ici saatine oranla eslestiren dijital saat
+        // gosterimi ("09:45" gibi). TimerFillBar KALDIRILDI (kullanici karari) - sadece metin var.
         bool freeMode = dayCycleManager.IsFreeMode.Value;
-        float timer = dayCycleManager.Timer.Value;
-        float window = dayCycleManager.customerWindowSeconds;
 
         if (timerText != null)
         {
-            timerText.text = freeMode
-                ? "Müşteri Gelişi Kapalı - Serbest Mod"
-                : "Müşteri Gelişi: " + Mathf.CeilToInt(Mathf.Max(0f, timer)) + " sn";
-        }
+            if (freeMode)
+            {
+                timerText.text = "18:00 - Serbest Mod";
+            }
+            else
+            {
+                float window = dayCycleManager.customerWindowSeconds;
+                float timer = dayCycleManager.Timer.Value;
+                float elapsed = Mathf.Clamp(window - timer, 0f, window);
+                float progress = window > 0f ? elapsed / window : 0f;
 
-        if (timerFillBar != null)
-        {
-            timerFillBar.fillAmount = (!freeMode && window > 0f) ? Mathf.Clamp01(timer / window) : 0f;
+                float totalGameMinutes = progress * 12f * 60f; // 06:00 -> 18:00 = 12 saat = 720 dakika
+                int gameHour = 6 + Mathf.FloorToInt(totalGameMinutes / 60f);
+                int gameMinute = Mathf.FloorToInt(totalGameMinutes % 60f);
+
+                timerText.text = gameHour.ToString("00") + ":" + gameMinute.ToString("00");
+            }
         }
     }
 

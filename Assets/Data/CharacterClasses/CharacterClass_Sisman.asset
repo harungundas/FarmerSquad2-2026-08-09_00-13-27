@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9cd6e94b4e422524c97f295d2af2a5f0, type: 3}
   m_Name: CharacterClass_Sisman
   m_EditorClassIdentifier: Assembly-CSharp::CharacterClassData
-  walkSpeed: 16
+  walkSpeed: 14
   carrySpeedMultiplier: 1
   heavyCarrySpeedMultiplier: 1
   feedDuration: 4

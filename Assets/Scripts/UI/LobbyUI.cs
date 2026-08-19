@@ -109,6 +109,12 @@ public class LobbyUI : MonoBehaviour
     [Header("T50 - Lobi Listesi Baglantisi (Leave sonrasi donus icin)")]
     public LobbyListUI lobbyListUI;
 
+    [Header("BUG DUZELTMESI - Karakter secimini GERCEK govdeye (CharacterSelectionManager, network) baglar. \nEskiden bu script sadece kozmetik fotograf degistiriyordu, sunucuya hicbir istek gitmiyordu - \nbu yuzden secim oyun icinde hicbir zaman uygulanmiyordu (herkes varsayilan Yetiskin'de kaliyordu).")]
+    public CharacterSelectionManager selectionManager;
+
+    [Header("BUG DUZELTMESI (kullanici karari) - Leave artik Lobi Listesi DEGIL, DOGRUDAN Ana Menu'ye donuyor")]
+    public GameObject mainMenuPanelRoot;
+
     [Header("BUG DUZELTMESI - Gercek Oyun Baslangici (countdown 0'da cagrilir, DayCycleManager/VehicleSpawner artik network-spawn aninda degil bu sinyalle basliyor)")]
     public DayCycleManager dayCycleManager;
 
@@ -124,8 +130,13 @@ public class LobbyUI : MonoBehaviour
 
 
 
-    private void Awake()
+private void Awake()
     {
+        // BUG DUZELTMESI (kullanici raporu): sahnede Panel yanlislikla aktif kaydedilmisti,
+        // bu da LobbyUI'nin oyun daha Ana Menu'deyken gorunur olmasina ve Ayarlar/diger
+        // panellerin ustunu kapatmasina neden oluyordu. Artik Awake KENDI baslangic
+        // gorunurlugunu sahne dosyasinin kaydedilmis haline guvenmeden garanti eder.
+        if (panelRoot != null) panelRoot.SetActive(false);
         WireButtons();
         WireCharacterPortraits();
     }
@@ -245,16 +256,30 @@ private void UpdatePlaceholderSlots()
     /// vurgular ve local slot'taki (localSlotIndex) Image bilesenine secilen karakterin
     /// statik fotografini uygular. Kilitliyken (Ready sonrasi) hicbir sey yapmaz - buton
     /// zaten interactable=false olur, bu kontrol savunma amacli ekstra guvenlik.</summary>
-    public void OnCharacterSelected(int charIndex)
+public void OnCharacterSelected(int charIndex)
     {
         if (isSelectionLocked) return;
 
         SelectCharacter(charIndex);
 
         string charName = (charIndex >= 0 && charIndex < characterNames.Length) ? characterNames[charIndex] : charIndex.ToString();
-        Debug.Log("[LobbyUI] Karakter secildi: " + charName + " (index " + charIndex + ")");
+        Debug.Log("[LobbyUI] Karakter secildi (local/kozmetik): " + charName + " (index " + charIndex + ")");
 
         ApplySlotPortrait(localSlotIndex, charIndex);
+
+        // BUG DUZELTMESI: eskiden burada selectionManager hicbir zaman cagrilmiyordu - secim
+        // sadece kozmetik fotografi degistiriyordu, sunucuya hicbir istek gitmiyordu, bu yuzden
+        // gercek govde (PlayerController.IsControllable) hep varsayilan Yetiskin'de kaliyordu.
+        // Simdi gercek atama isteği burada sunucuya gonderiliyor.
+        if (selectionManager != null)
+        {
+            Debug.Log("[LobbyUI] Sunucuya karakter atama istegi gonderiliyor: " + charName + " (index " + charIndex + ")");
+            selectionManager.RequestSelectCharacterServerRpc(charIndex);
+        }
+        else
+        {
+            Debug.LogWarning("[LobbyUI] selectionManager atanmamis - karakter secimi sunucuya iletilemedi, oyun icinde varsayilan (Yetiskin) govde kullanilmaya devam edecek.");
+        }
     }
 
     /// <summary>Verilen orta slotun Image bilesenine, verilen karakter index'inin statik
@@ -452,6 +477,19 @@ private void UpdatePlaceholderSlots()
         // gizli kalmiyordu - hem gorsel olarak ekranda kaliyordu hem de ustundeki UI
         // raycast'leri (Canvas Graphic Raycaster) oyuncunun karakteri kontrol etmesini
         // engelliyordu/karisiyordu. Oyun basinca lobi ekrani tamamen kapatilir.
+        // BUG DUZELTMESI (kullanici raporu: "HUD'lar gorunmuyor"): HUDController.Show()
+        // hicbir yerde cagirilmiyordu, HUD Awake()'te Hide() ile kapali kaliyor ve hep oyle
+        // kaliyordu. Gercek oyun-baslama noktasi TAM BURASI - HUD de burada acilir.
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.Show();
+            Debug.Log("[LobbyUI] HUDController.Instance.Show() cagirildi - HUD paneller acildi.");
+        }
+        else
+        {
+            Debug.LogWarning("[LobbyUI] HUDController.Instance null - HUD acilamadi (sahnede HUDController var mi kontrol et).");
+        }
+
         Hide();
     }
 
@@ -606,15 +644,15 @@ private void UpdatePlaceholderSlots()
         ResetCountdown();
         Hide();
 
-        if (lobbyListUI != null)
+        if (mainMenuPanelRoot != null)
         {
-            lobbyListUI.Show();
+            mainMenuPanelRoot.SetActive(true);
         }
         else
         {
-            Debug.LogWarning("[LobbyUI] lobbyListUI atanmamis - Leave sonrasi Lobiye Katil listesine donulemedi (T50).");
+            Debug.LogWarning("[LobbyUI] mainMenuPanelRoot atanmamis - Leave sonrasi Ana Menuye donulemedi.");
         }
 
-        Debug.Log("[LobbyUI] Leave: LobbySessionManager.LeaveLobby() cagirildi, Lobiye Katil listesine donuluyor.");
+        Debug.Log("[LobbyUI] Leave: LobbySessionManager.LeaveLobby() cagirildi, Ana Menuye donuluyor.");
     }
 }

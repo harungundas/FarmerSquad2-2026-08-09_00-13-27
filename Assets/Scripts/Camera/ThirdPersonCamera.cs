@@ -18,20 +18,28 @@ public class ThirdPersonCamera : MonoBehaviour
         vcam = GetComponent<CinemachineCamera>();
     }
 
-    private void Update()
+private void Update()
     {
-        if (targetAssigned) return;
+        // DUZELTME (kullanici raporu): eskiden "targetAssigned" bayragiyla hedef SADECE BIR KEZ
+        // atanip kilitleniyordu. Lobiye girince CharacterSelectionManager otomatik Yetiskin'i
+        // (IsControllable=true) atadigi icin kamera hemen ona kilitleniyordu; oyuncu lobide
+        // BASKA bir karakter secince eski govde IsControllable=false olup gorunmez/kinematik
+        // kaliyordu ama kamera hala O ESKI, artik donmus govdeye bakmaya devam ediyordu ("bosluga
+        // atma" bug'i). Artik HER FRAME, gercekten IsOwner VE IsControllable=true olan govde
+        // aranir ve hedef degistiyse guncellenir - karakter degisiminde otomatik takip eder.
         if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening) return;
 
         var controllers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
         foreach (var pc in controllers)
         {
-            if (pc.IsOwner)
+            if (pc.IsOwner && pc.IsControllable.Value)
             {
-                vcam.Follow = pc.transform;
-                vcam.LookAt = pc.transform;
-                targetAssigned = true;
-                break;
+                if (vcam.Follow != pc.transform)
+                {
+                    vcam.Follow = pc.transform;
+                    vcam.LookAt = pc.transform;
+                }
+                return;
             }
         }
     }

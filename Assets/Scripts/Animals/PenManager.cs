@@ -72,6 +72,7 @@ public class PenManager : NetworkBehaviour
             if (animalBase != null)
             {
                 animalBase.ownerPen = transform;
+                animalBase.countedInStock = true; // baslangic stogu - PenStockEntryDetector tekrar saymasin
             }
 
             if (networked)

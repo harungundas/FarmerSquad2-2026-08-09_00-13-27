@@ -214,7 +214,42 @@ private void StartPushing(PlayerController player)
         }
     }
 
-    private void Load(AnimalBase animal)
+    private void SnapToGround(Transform t)
+    {
+        // CarryController.SnapToGround ile ayni sebep/cozum: hayvan asset paketleri arasi
+        // tutarsiz fizik kurulumu (bazi Rigidbody useGravity=false, bazilarinda Rigidbody
+        // yerine CharacterController var, bazilarinda hicbiri yok) yuzunden isKinematic=false
+        // tek basina zemine dusmeyi garanti etmiyor. Raycast ile dogrudan oturtuyoruz.
+        Vector3 origin = t.position + Vector3.up * 10f;
+        RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 40f);
+
+        RaycastHit best = default;
+        bool found = false;
+        float bestDist = float.MaxValue;
+
+        foreach (var hit in hits)
+        {
+            if (hit.transform == t || hit.transform.IsChildOf(t)) continue;
+            if (hit.transform == transform || hit.transform.IsChildOf(transform)) continue;
+
+            if (hit.distance < bestDist)
+            {
+                bestDist = hit.distance;
+                best = hit;
+                found = true;
+            }
+        }
+
+        if (found)
+        {
+            Vector3 p = t.position;
+            p.y = best.point.y;
+            t.position = p;
+        }
+    }
+
+    
+private void Load(AnimalBase animal)
     {
         lockedWeightClass = animal.animalData.weightClass;
         int slot = loadedAnimals.Count;
@@ -243,8 +278,7 @@ private void StartPushing(PlayerController player)
     /// (DeliveryZoneDetector ile) sonraki bir task'ta kurulacak - bu iskelet task'ta
     /// sadece manuel/context-menu ile cagrilabilir bir bosaltma yeterli.
     /// </summary>
-    [ContextMenu("Debug: Unload All")]
-    public void UnloadAll()
+public void UnloadAll()
     {
         for (int i = 0; i < loadedAnimals.Count; i++)
         {
@@ -256,6 +290,10 @@ private void StartPushing(PlayerController player)
 
             var rb = animal.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = false;
+
+            // BUG DUZELTMESI (CarryController.SnapToGround ile ayni sebep): fizige guvenmeden
+            // hayvani dogrudan zemine oturt, yoksa havada asili kalabilir.
+            SnapToGround(animal.transform);
         }
         loadedAnimals.Clear();
         lockedWeightClass = null;

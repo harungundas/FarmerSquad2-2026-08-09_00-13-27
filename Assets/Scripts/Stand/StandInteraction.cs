@@ -35,7 +35,10 @@ public class StandInteraction : NetworkBehaviour
 {
     [Header("Bağlantılar")]
     public NegotiationManager negotiationManager;
-    public VehicleSpawner vehicleSpawner;
+    
+    [Header("Teslimat Onay Ekrani")]
+    public DeliveryConfirmUI deliveryConfirmUI;
+public VehicleSpawner vehicleSpawner;
 
     [Header("Etkileşim (trigger collider boyutu)")]
     public Vector3 triggerSize = new Vector3(2.5f, 2.5f, 2.5f);
@@ -47,7 +50,20 @@ public class StandInteraction : NetworkBehaviour
         var col = GetComponent<BoxCollider>();
         if (col == null) col = gameObject.AddComponent<BoxCollider>();
         col.isTrigger = true;
-        col.size = triggerSize;
+        // BUG DUZELTMESI (kullanici bildirdi: "F basinca hicbir sey olmuyor / yazi cikmiyor"):
+        // Bu obje (kasa/bilgisayar) FAZ13/14 olcek calismalari sirasinda market_stall
+        // tezgahinin USTUNE (~8-8.5 birim yukseklik farkiyla) yerlestirilmis, ama oyuncu
+        // YERDE (terrain seviyesinde) yuruyor - iki nokta arasinda BUYUK bir dikey bosluk var.
+        // Sabit boyutlu trigger bu bosluga hic ulasamiyordu, bu yuzden OnTriggerEnter HICBIR
+        // ZAMAN tetiklenmiyordu. Kalici/kesin dogru yukseklik FAZ14 T61'de netlesecek (henuz
+        // cozulmedi) - o zamana kadar GUVENLI/GENIS bir dikey trigger kullaniyoruz: objenin
+        // ALTINA dogru uzayan, dunya-uzayinda sabit boyutlu (lossyScale'e bolunerek local'e
+        // cevrilen) bir kutu.
+        float worldDownReachY = 18f; // dunya biriminde, asagi dogru kapsama mesafesi
+        float lossyY = Mathf.Max(0.0001f, transform.lossyScale.y);
+        float localSizeY = worldDownReachY / lossyY;
+        col.size = new Vector3(triggerSize.x, localSizeY, triggerSize.z);
+        col.center = new Vector3(0f, -localSizeY * 0.45f, 0f);
 
         if (negotiationManager == null) negotiationManager = GetComponent<NegotiationManager>();
     }
@@ -70,9 +86,15 @@ public class StandInteraction : NetworkBehaviour
         }
     }
 
-    private void Update()
+private void Update()
     {
-        if (playerInRange == null) return;
+        if (playerInRange == null)
+        {
+            if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Hide();
+            return;
+        }
+
+        UpdatePrompt();
 
         var keyboard = Keyboard.current;
         if (keyboard == null) return;
@@ -83,7 +105,29 @@ public class StandInteraction : NetworkBehaviour
         }
     }
 
-    private void TryOpenNegotiation()
+    /// <summary>Kasanin mevcut asamasina gore InteractionIndicator prompt metnini gunceller
+    /// ("F - Bas - Kasayi Kullan" / "F - Bas - Teslimati Onayla" / mesgul).</summary>
+    private void UpdatePrompt()
+    {
+        if (InteractionIndicator.Instance == null) return;
+
+        var stage = negotiationManager != null ? negotiationManager.State.Value.stage : NegotiationStage.Inactive;
+
+        if (stage == NegotiationStage.Inactive)
+        {
+            InteractionIndicator.Instance.Show(transform, "F - Bas - Kasayı Kullan");
+        }
+        else if (stage == NegotiationStage.AwaitingDelivery)
+        {
+            InteractionIndicator.Instance.Show(transform, "F - Bas - Teslimatı Onayla");
+        }
+        else
+        {
+            InteractionIndicator.Instance.ShowTextOnly("Kasa Meşgul");
+        }
+    }
+
+private void TryOpenNegotiation()
     {
         if (negotiationManager == null)
         {
@@ -94,11 +138,21 @@ public class StandInteraction : NetworkBehaviour
         var currentStage = negotiationManager.State.Value.stage;
 
         // Kullanici geri bildirimi sonrasi eklendi: fiyat AwaitingDelivery'de kilitliyken
-        // (oyuncu hayvanlari teslimat alanina tasiyip kasaya DONDUGUNDE) F artik YENI bir
-        // pazarlik ACMAZ, bunun yerine teslimati sonuclandirir (DeliveryZoneDetector T16 okunur).
+        // (oyuncu hayvanlari teslimat alanina tasiyip kasaya DONDUGUNDE) F artik dogrudan
+        // finalize etmez - once bir onay ekrani (DeliveryConfirmUI.Show/Hide) acar, siparis
+        // detayini ve canli dogru/yanlis durumunu gosterir. RequestFinalizeDeliveryServerRpc
+        // SADECE o ekrandaki [Teslim Et] butonuna basilinca cagrilir.
         if (currentStage == NegotiationStage.AwaitingDelivery)
         {
-            negotiationManager.RequestFinalizeDeliveryServerRpc();
+            if (deliveryConfirmUI != null)
+            {
+                if (deliveryConfirmUI.IsOpen) deliveryConfirmUI.Hide();
+                else deliveryConfirmUI.Show();
+            }
+            else
+            {
+                Debug.LogWarning("[StandInteraction] deliveryConfirmUI atanmamis, guvenlik icin dogrudan finalize edilmiyor.");
+            }
             return;
         }
 

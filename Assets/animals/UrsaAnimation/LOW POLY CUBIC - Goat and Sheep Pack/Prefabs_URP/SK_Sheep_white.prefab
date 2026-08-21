@@ -2683,7 +2683,7 @@ Animator:
   m_Controller: {fileID: 9100000, guid: 1215e98cc02a91340b3a9af5af091f14, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
-  m_ApplyRootMotion: 1
+  m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
   m_StabilizeFeet: 0
   m_AnimatePhysics: 0
@@ -2729,6 +2729,8 @@ MonoBehaviour:
   animalData: {fileID: 11400000, guid: b81c84724eef17644a27c3f73be8d2a2, type: 2}
   ownerPen: {fileID: 0}
   hunger: 100
+  countedInStock: 0
+  IsBeingCarried: 0
 --- !u!114 &7212056917313355922
 MonoBehaviour:
   m_ObjectHideFlags: 0

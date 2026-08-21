@@ -67,18 +67,77 @@ private void Update()
         // Artik TEK E BASISI yeterli - hem alma hem birakma icin wasPressedThisFrame kullanilir.
         if (nearest != null)
         {
+            if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Show(nearest.transform, "E - Bas - Hayvanı Sırtla");
+
             if (keyboard.eKey.wasPressedThisFrame)
             {
                 PickUp(nearest);
             }
         }
-        else if (carriedAnimals.Count > 0 && keyboard.eKey.wasPressedThisFrame)
+        else if (carriedAnimals.Count > 0)
         {
-            DropAll();
+            if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.ShowTextOnly("E - Bas - Bırak");
+
+            if (keyboard.eKey.wasPressedThisFrame)
+            {
+                DropAll();
+            }
+        }
+        else
+        {
+            if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Hide();
         }
     }
 
-    private AnimalBase FindNearestCarryableAnimal(int capacity)
+    private void SnapToGround(Transform animalTransform)
+    {
+        // BUG DUZELTMESI (kullanici bildirdi): hayvan birakilinca havada asili kaliyordu.
+        // Sebep: 5 hayvan turu 4 farkli asset paketinden geliyor ve fizik kurulumlari
+        // TUTARSIZ - Cow/Goat Rigidbody.useGravity=false, Horse/Chicken Rigidbody YERINE
+        // sadece CharacterController var (CharacterController kendiliginden yercekimi
+        // UYGULAMAZ), Sheep'te ikisi de yok. isKinematic=false bu yuzden guvenilir dusme
+        // saglamiyordu. Fizige GUVENMEDEN, birakma aninda asagi raycast atip hayvani
+        // dogrudan zemin/nesne yuksekligine oturtuyoruz.
+        Vector3 origin = animalTransform.position + Vector3.up * 10f;
+        RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 40f);
+
+        RaycastHit best = default;
+        bool found = false;
+        float bestDist = float.MaxValue;
+
+        foreach (var hit in hits)
+        {
+            if (hit.transform == animalTransform || hit.transform.IsChildOf(animalTransform)) continue;
+            if (hit.transform == transform || hit.transform.IsChildOf(transform)) continue;
+            // BUG DUZELTMESI (hayvan havada asili kaliyor sorunu): citler gibi bazi objelerin
+            // trigger collider'i var (orn. PenStockEntryDetector icin) ve bu trigger, gercek
+            // zeminden DAHA YUKARIDA bir yukseklikte hit veriyordu - raycast ilk (en yakin) hit'i
+            // "zemin" saniyordu ve hayvan o trigger'in yuksekligine oturup havada kalmis gibi
+            // gorunuyordu. Trigger collider'lari zemin adayi olarak SAYMIYORUZ.
+            if (hit.collider.isTrigger) continue;
+
+            if (hit.distance < bestDist)
+            {
+                bestDist = hit.distance;
+                best = hit;
+                found = true;
+            }
+        }
+
+        if (found)
+        {
+            Vector3 p = animalTransform.position;
+            p.y = best.point.y;
+            animalTransform.position = p;
+        }
+        else
+        {
+            Debug.LogWarning("[CarryController] SnapToGround: " + animalTransform.name + " altinda zemin bulunamadi (raycast bos), pozisyon degistirilmedi.");
+        }
+    }
+
+    
+private AnimalBase FindNearestCarryableAnimal(int capacity)
     {
         bool lightOnly = capacity > 1; // Sadece Sisman (capacity=2) hafif-hayvan kisitina tabi.
 
@@ -162,6 +221,15 @@ private void PickUp(AnimalBase animal)
         var controller = animal.GetComponent<CharacterController>();
         if (controller != null) controller.enabled = false;
 
+        // BUG DUZELTMESI (kullanici bildirdi: "tuslara dokunmadan hareket ediyorum"): CharacterController
+        // disable edilse de hayvanin gercek Collider'i (BoxCollider/CapsuleCollider vb.) ACIK kaliyordu.
+        // Kinematik hale gelen hayvan karaktere ~0.3-1.3m offsetle parent'landiginda bu collider,
+        // karakterin KENDI collider'iyla ic ice giriyor - fizik motoru her FixedUpdate'te ayristirma
+        // kuvveti uygulayip karakteri tus basilmadan kaydiriyordu. Tasima suresince TUM Collider'lari
+        // kapatiyoruz (GetComponents COKLU - bazi govdelerde birden fazla collider olabilir).
+        var carriedColliders = animal.GetComponents<Collider>();
+        foreach (var col in carriedColliders) col.enabled = false;
+
         if (animator != null) animator.SetBool("IsCarrying", true);
 
         Debug.Log("[CarryController] " + gameObject.name + " hayvani sirtladi: " + animal.gameObject.name +
@@ -183,9 +251,6 @@ private void DropAll()
             var rb = animal.GetComponent<Rigidbody>();
             if (rb != null)
             {
-                // BUG DUZELTMESI: fizigi tekrar acmadan ONCE hizi acikca sifirla - PickUp() sirasinda
-                // zaten sifirlanmisti ama tasima boyunca kinematik govdeye disaridan (orn. baska bir
-                // carpismadan) bir hiz sizmis olabilir; guvenli taraf sifirdan baslatmak.
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
                 rb.isKinematic = false;
@@ -193,6 +258,18 @@ private void DropAll()
 
             var controller = animal.GetComponent<CharacterController>();
             if (controller != null) controller.enabled = true;
+
+            // PickUp()'ta kapatilan Collider'lari geri aciyoruz - SnapToGround'dan ONCE acmiyoruz
+            // ki raycast hala kendi collider'ina çarpip yanlis zemin bulmasin (SnapToGround zaten
+            // kendi transform'unu/child'larini disliyor ama erken acmak gereksiz risk).
+            var droppedColliders = animal.GetComponents<Collider>();
+            foreach (var col in droppedColliders) col.enabled = true;
+
+            // BUG DUZELTMESI (kullanici bildirdi, "havada asili kaliyor"): isKinematic=false /
+            // CharacterController.enabled=true fizigin hayvani zemine dusurecegini VARSAYIYORDU
+            // ama asset paketleri arasi tutarsiz kurulum yuzunden bu garanti degildi (bkz.
+            // SnapToGround yorum bloğu). Raycast ile dogrudan zemine oturtuyoruz.
+            SnapToGround(animal.transform);
 
             animal.IsBeingCarried = false;
 

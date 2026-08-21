@@ -32,7 +32,11 @@ public class MarketUI : MonoBehaviour
 
     public Button nextDayButton;
 
-    private void Awake()
+    [Header("KIRMIZI Gunu Bitir butonu (kullanici istegi - kota kontrolu YAPAR)")]
+    public Button endDayButton;
+
+
+private void Awake()
     {
         if (panelRoot != null) panelRoot.SetActive(false);
 
@@ -44,6 +48,7 @@ public class MarketUI : MonoBehaviour
         }
 
         if (nextDayButton != null) nextDayButton.onClick.AddListener(OnNextDayClicked);
+        if (endDayButton != null) endDayButton.onClick.AddListener(OnEndDayClicked);
     }
 
     private void OnEnable()
@@ -137,7 +142,14 @@ public class MarketUI : MonoBehaviour
         marketManager.PurchaseUpgradeServerRpc(index);
     }
 
-    private void OnNextDayClicked()
+    private void OnEndDayClicked()
+    {
+        if (marketManager == null) return;
+        marketManager.RequestEndDayServerRpc();
+    }
+
+    
+private void OnNextDayClicked()
     {
         if (marketManager == null) return;
         marketManager.RequestCloseAndAdvanceServerRpc();

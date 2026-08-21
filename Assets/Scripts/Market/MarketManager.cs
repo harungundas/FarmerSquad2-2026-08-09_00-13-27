@@ -82,6 +82,29 @@ public class MarketManager : NetworkBehaviour
     /// Yetersiz bakiye veya zaten satin alinmissa sessizce reddeder (log ile bildirir).
     /// </summary>
     [ServerRpc(RequireOwnership = false)]
+    public void OpenMarketPreviewServerRpc()
+    {
+        if (!IsServer) return;
+        OpenMarket(dayCycleManager != null ? dayCycleManager.CurrentDay.Value : 0);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestEndDayServerRpc()
+    {
+        if (!IsServer) return;
+
+        IsOpen.Value = false;
+
+        if (dayCycleManager != null)
+        {
+            dayCycleManager.CompleteDayServer();
+        }
+        else
+        {
+            Debug.LogError("[MarketManager] dayCycleManager atanmamis, gun bitirilemedi.");
+        }
+    }
+    [ServerRpc(RequireOwnership = false)]
     public void PurchaseUpgradeServerRpc(int upgradeIndex)
     {
         if (!IsServer) return;

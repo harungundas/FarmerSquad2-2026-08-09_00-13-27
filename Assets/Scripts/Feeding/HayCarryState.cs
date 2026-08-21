@@ -33,7 +33,7 @@ public class HayCarryState : MonoBehaviour
         playerController = GetComponent<PlayerController>();
     }
 
-    private void Update()
+private void Update()
     {
         if (!playerController.IsOwner || !playerController.IsControllable.Value) return;
 
@@ -50,8 +50,11 @@ public class HayCarryState : MonoBehaviour
         if (keyboard == null || targetAnimal == null)
         {
             holdTimer = 0f;
+            if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Hide();
             return;
         }
+
+        if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Show(targetAnimal.transform, "E - Basılı Tut - Besle");
 
         if (keyboard.eKey.isPressed)
         {
@@ -91,7 +94,7 @@ public class HayCarryState : MonoBehaviour
         return nearest;
     }
 
-    private void FeedAnimal(AnimalBase animal)
+private void FeedAnimal(AnimalBase animal)
     {
         var hunger = animal.GetComponent<AnimalHunger>();
         if (hunger != null)
@@ -108,5 +111,7 @@ public class HayCarryState : MonoBehaviour
         holdTimer = 0f;
         Debug.Log("[HayCarryState] " + gameObject.name + " hayvani besledi: " + animal.gameObject.name + " - aclik 100'e resetlendi.");
         targetAnimal = null;
+
+        if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Hide();
     }
 }

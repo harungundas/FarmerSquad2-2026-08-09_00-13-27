@@ -57,9 +57,15 @@ public class HayPile : MonoBehaviour
         }
     }
 
-    private void Update()
+private void Update()
     {
-        if (taken || playerInRange == null) return;
+        if (taken || playerInRange == null)
+        {
+            if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Hide();
+            return;
+        }
+
+        if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Show(transform, "E - Basılı Tut - Yem Al");
 
         var keyboard = Keyboard.current;
         if (keyboard == null) return;
@@ -78,11 +84,12 @@ public class HayPile : MonoBehaviour
         }
     }
 
-    private void PickUp(PlayerController player)
+private void PickUp(PlayerController player)
     {
         taken = true;
         player.isCarryingHay = true;
         Debug.Log("[HayPile] Saman alindi: " + gameObject.name + " - oyuncu saman tasiyor durumuna gecti.");
+        if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Hide();
         StartCoroutine(ShrinkAndDisable());
     }
 

@@ -55,6 +55,14 @@ public class HUDController : MonoBehaviour
     [Tooltip("Sol üst / sol alt / sağ üst panelleri - Show()/Hide() ile birlikte açılıp kapanır. AlertPanel BURAYA DAHİL DEĞİL, o kendi SetAlertVisible mantığını kullanmaya devam eder.")]
     public GameObject[] hudPanels;
 
+    [Header("Lobiye Don / Cikis (kullanici istegi)")]
+    public Button exitButton;
+    public GameObject mainMenuPanelRoot;
+    [Tooltip("KULLANICI ISTEGI: Cikis butonuna basinca direkt cikmak yerine once onay sorulsun. LobbyUI.forceStartModalPanel ile AYNI desen.")]
+    public GameObject exitConfirmModalPanel;
+    public Button exitConfirmButton;
+    public Button exitCancelButton;
+
     /// <summary>
     /// Sahnede tek bir HUDController varsayılır (Faz 9). VehicleSpawner ve NegotiationManager
     /// gibi ağ scriptleri Inspector referansı yerine bu static Instance üzerinden ShowAlert
@@ -65,6 +73,10 @@ public class HUDController : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        if (exitButton != null) exitButton.onClick.AddListener(OnExitButtonClicked);
+        if (exitConfirmButton != null) exitConfirmButton.onClick.AddListener(OnExitConfirmed);
+        if (exitCancelButton != null) exitCancelButton.onClick.AddListener(OnExitCancelled);
+        if (exitConfirmModalPanel != null) exitConfirmModalPanel.SetActive(false);
         SetAlertVisible(false);
         Hide(); // Bug fix: sahne açılışında HUD'un Lobi/MainMenu üstüne çıkmasını engeller - gerçek oyun başlayınca (T48/T49 start-game akışında) Show() çağrılacak.
     }
@@ -234,6 +246,55 @@ private void RefreshTimer()
         }
     }
 
+/// <summary>KULLANICI ISTEGI: HUD'daki Ayarlar butonunun yanina eklenen Cikis butonu.
+    /// Su anki proje durumunda (LobbySessionManager sadece lokal/sahte lobi kaydi tutuyor,
+    /// gercek Steam/NGO baglantisi henuz yok - bkz. LobbySessionManager.cs ust yorumu) bu,
+    /// LobbyUI.OnLeaveClicked ile AYNI deseni izler: lobi kaydini birakir, HUD'u kapatir,
+    /// Ana Menu'yu acar. NOT: gun/kasa/kota durumu SIFIRLANMAZ - tekrar [Lobi Olustur] ile
+    /// yeni oyun baslatildiginda kaldigi yerden devam eder (DayCycleManager'da ayri bir
+    /// "oyunu sifirla" mekanizmasi henuz yok, bu ayri bir gorev).</summary>
+    /// <summary>KULLANICI ISTEGI: Cikis butonuna basinca ARTIK direkt cikmiyor - once onay
+    /// modali aciliyor (LobbyUI.forceStartModalPanel ile ayni desen). Gercek cikis islemi
+    /// OnExitConfirmed()'e tasindi.</summary>
+    private void OnExitButtonClicked()
+    {
+        if (exitConfirmModalPanel != null)
+        {
+            exitConfirmModalPanel.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning("[HUDController] exitConfirmModalPanel atanmamis - guvenlik icin dogrudan cikilmiyor. Sahnede modal olusturulup atanmali.");
+        }
+    }
+
+    /// <summary>Onay modalindaki [Evet, Çık] butonu. Gercek cikis islemini yapar.</summary>
+    private void OnExitConfirmed()
+    {
+        if (exitConfirmModalPanel != null) exitConfirmModalPanel.SetActive(false);
+
+        LobbySessionManager.LeaveLobby();
+        Hide();
+
+        if (mainMenuPanelRoot != null)
+        {
+            mainMenuPanelRoot.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning("[HUDController] mainMenuPanelRoot atanmamis - Cikis sonrasi Ana Menuye donulemedi.");
+        }
+
+        Debug.Log("[HUDController] Cikis onaylandi: LobbySessionManager.LeaveLobby() cagirildi, Ana Menuye donuluyor.");
+    }
+
+    /// <summary>Onay modalindaki [Vazgeç] butonu. Modali kapatir, hicbir sey yapmaz.</summary>
+    private void OnExitCancelled()
+    {
+        if (exitConfirmModalPanel != null) exitConfirmModalPanel.SetActive(false);
+    }
+
+
     /// <summary>
     /// T37: Geçici bir uyarı mesajı gösterir, `duration` saniye sonra otomatik gizler.
     /// Coroutine/animasyon YOK (basit tutulmalı, TASKS.md T37 notu) - CancelInvoke+Invoke yeterli.
@@ -264,10 +325,17 @@ private void RefreshTimer()
         else if (alertText != null) alertText.gameObject.SetActive(visible);
     }
 
-    /// <summary>T37: VehicleSpawner'in ClientRpc'si bunu cagirir - "Arac geldi! Siparis: 2x Tavuk" gibi.</summary>
-    public void ShowVehicleArrivedAlert(AnimalSpecies species, int count)
+    /// <summary>T37: VehicleSpawner'in ClientRpc'si bunu cagirir - "Arac geldi! Siparis: 2x Tavuk" gibi.
+    /// KULLANICI BUG RAPORU DUZELTMESI: eskiden yon (Satis/Alim) bu uyarida hic belirtilmiyordu,
+    /// oyuncu aracin SATMAK mi yoksa SATIN ALMAK mi istedigini anlayamiyordu. Artik yon ACIKCA
+    /// yazilir: Satis = musteri bizden hayvan ALMAK istiyor (biz satiyoruz), Alim = musteri bize
+    /// hayvan SATMAK istiyor (biz satin aliyoruz).</summary>
+    public void ShowVehicleArrivedAlert(AnimalSpecies species, int count, OrderDirection direction)
     {
-        ShowAlert("Araç geldi! Sipariş: " + count + "x " + TurkishSpeciesName(species), 4f);
+        string msg = direction == OrderDirection.Satis
+            ? "Araç geldi! Müşteri " + count + "x " + TurkishSpeciesName(species) + " SATIN ALMAK istiyor (SATIŞ)"
+            : "Araç geldi! Müşteri " + count + "x " + TurkishSpeciesName(species) + " SATMAK istiyor (ALIM)";
+        ShowAlert(msg, 4f);
     }
 
     /// <summary>T37: NegotiationManager'in ClientRpc'si bunu cagirir (yanlis/eksik teslimat).</summary>

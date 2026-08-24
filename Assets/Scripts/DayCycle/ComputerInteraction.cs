@@ -30,21 +30,12 @@ public class ComputerInteraction : NetworkBehaviour
 
     private PlayerController playerInRange;
 
-    private void Awake()
+private void Awake()
     {
         var col = GetComponent<BoxCollider>();
         if (col == null) col = gameObject.AddComponent<BoxCollider>();
         col.isTrigger = true;
-        // BUG DUZELTMESI (kullanici bildirdi: "F basinca hicbir sey olmuyor / yazi cikmiyor"):
-        // Bu obje (kasa/bilgisayar) FAZ13/14 olcek calismalari sirasinda market_stall
-        // tezgahinin USTUNE (~8-8.5 birim yukseklik farkiyla) yerlestirilmis, ama oyuncu
-        // YERDE (terrain seviyesinde) yuruyor - iki nokta arasinda BUYUK bir dikey bosluk var.
-        // Sabit boyutlu trigger bu bosluga hic ulasamiyordu, bu yuzden OnTriggerEnter HICBIR
-        // ZAMAN tetiklenmiyordu. Kalici/kesin dogru yukseklik FAZ14 T61'de netlesecek (henuz
-        // cozulmedi) - o zamana kadar GUVENLI/GENIS bir dikey trigger kullaniyoruz: objenin
-        // ALTINA dogru uzayan, dunya-uzayinda sabit boyutlu (lossyScale'e bolunerek local'e
-        // cevrilen) bir kutu.
-        float worldDownReachY = 18f; // dunya biriminde, asagi dogru kapsama mesafesi
+        float worldDownReachY = 18f;
         float lossyY = Mathf.Max(0.0001f, transform.lossyScale.y);
         float localSizeY = worldDownReachY / lossyY;
         col.size = new Vector3(triggerSize.x, localSizeY, triggerSize.z);
@@ -74,6 +65,16 @@ public class ComputerInteraction : NetworkBehaviour
 
 private void Update()
     {
+        // Sadece aday olarak kaydol (InteractionArbiter.cs) - asil karar LateUpdate'te.
+        if (playerInRange == null) return;
+        if (!IsActionable()) return;
+
+        float distSqr = (playerInRange.transform.position - transform.position).sqrMagnitude;
+        InteractionArbiter.Register(this, distSqr);
+    }
+
+    private void LateUpdate()
+    {
         if (playerInRange == null)
         {
             if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Hide();
@@ -81,14 +82,17 @@ private void Update()
         }
 
         bool actionable = IsActionable();
-
-        if (InteractionIndicator.Instance != null)
+        if (!actionable)
         {
-            if (actionable) InteractionIndicator.Instance.Show(transform, "F - Bas - Market");
-            else InteractionIndicator.Instance.Hide();
+            if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Hide();
+            return;
         }
 
-        if (!actionable) return;
+        // BUG DUZELTMESI: kasa da menzildeyse ve ondan yakinsa, bu frame'i o kazanir - biz
+        // ne prompt gosteririz ne de F'i isleriz (InteractionArbiter.cs).
+        if (!InteractionArbiter.IsWinner(this)) return;
+
+        if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Show(transform, "F - Bas - Market");
 
         var keyboard = Keyboard.current;
         if (keyboard == null) return;
@@ -100,10 +104,8 @@ private void Update()
     }
 
     /// <summary>Sadece Serbest Mod'dayken VE Market kapalıyken aksiyon alınabilir - bkz. sınıf üstü not.</summary>
-    private bool IsActionable()
+private bool IsActionable()
     {
-        if (dayCycleManager == null) return false;
-        if (!dayCycleManager.IsFreeMode.Value) return false;
         if (marketManager != null && marketManager.IsOpen.Value) return false;
         return true;
     }

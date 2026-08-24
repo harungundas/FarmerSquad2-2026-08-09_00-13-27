@@ -5,13 +5,15 @@ using TMPro;
 
 /// <summary>
 /// Ayarlar ekranı (ARCHITECTURE.md "## Ana Menü & Lobi UI" + "## Ortak UI Kiti", TASKS.md T42).
-/// Ses (basit master volume slider), Görüntü (çözünürlük + pencere modu dropdown) ve Kontroller
-/// (statik tuş listesi, rebind YOK) sekmeleri. 3 buton ile basit sekme geçişi.
+/// Ses (Müzik + Efekt SFX olarak AYRI iki hacim slider'ı), Görüntü (çözünürlük + pencere modu
+/// dropdown) ve Kontroller (statik tuş listesi, rebind YOK) sekmeleri. 3 buton ile basit sekme
+/// geçişi.
 ///
-/// Ses sistemi GDD'de yok (Kapsam Dışı) — slider yalnızca global AudioListener.volume'a bağlanır,
-/// bağlanacağı ayrı bir ses/müzik sistemi henüz mevcut değil. Görüntü sekmesi GERÇEKTEN uygulanır
-/// (Screen.SetResolution / Screen.fullScreenMode) — bunlar Unity'nin kendi API'si, ek bir sistem
-/// gerektirmiyor.
+/// Ses sistemi artık mevcut (kullanici talebi, "## Ses (Audio) Sistemi" - Assets/Scripts/Audio/
+/// AudioManager.cs): Müzik slider'ı AudioManager.SetMusicVolume'a, Efekt slider'ı
+/// AudioManager.SetSFXVolume'a bağlanır - ikisi TAMAMEN BAĞIMSIZ, PlayerPrefs'te ayrı ayrı
+/// kalıcıdır. Görüntü sekmesi GERÇEKTEN uygulanır (Screen.SetResolution /
+/// Screen.fullScreenMode) — bunlar Unity'nin kendi API'si, ek bir sistem gerektirmiyor.
 ///
 /// MainMenuCanvas'teki [Ayarlar] (GrayBtn, T40) butonu bu script'in bulunduğu panelRoot'u
 /// (SettingsCanvas/Panel) doğrudan SetActive(true) ile açar — Ana Menü paneli KAPANMAZ, Ayarlar
@@ -37,8 +39,9 @@ public class SettingsUI : MonoBehaviour
     public GameObject gorselPanel;
     public GameObject kontrollerPanel;
 
-    [Header("Ses")]
-    public Slider masterVolumeSlider;
+    [Header("Ses (Muzik ve Efekt - AYRI kanallar, AudioManager.cs)")]
+    public Slider musicVolumeSlider;
+    public Slider sfxVolumeSlider;
 
     [Header("Görsel")]
     public TMP_Dropdown resolutionDropdown;
@@ -46,7 +49,7 @@ public class SettingsUI : MonoBehaviour
 
     private Resolution[] availableResolutions;
 
-private void Awake()
+    private void Awake()
     {
         // BUG DUZELTMESI (kullanici raporu): baska panellerin (orn. LobbyCanvas) sahnede
         // yanlislikla aktif kaydedilmesi, bu panelin de kendi baslangic gorunurlugune
@@ -58,12 +61,20 @@ private void Awake()
         if (kontrollerTabButton != null) kontrollerTabButton.onClick.AddListener(OnKontrollerTabClicked);
         if (closeButton != null) closeButton.onClick.AddListener(Hide);
 
-        if (masterVolumeSlider != null)
+        if (musicVolumeSlider != null)
         {
-            masterVolumeSlider.minValue = 0f;
-            masterVolumeSlider.maxValue = 1f;
-            masterVolumeSlider.value = AudioListener.volume;
-            masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeChanged);
+            musicVolumeSlider.minValue = 0f;
+            musicVolumeSlider.maxValue = 1f;
+            musicVolumeSlider.value = AudioManager.Instance != null ? AudioManager.Instance.MusicVolume : 1f;
+            musicVolumeSlider.onValueChanged.AddListener(OnMusicVolumeChanged);
+        }
+
+        if (sfxVolumeSlider != null)
+        {
+            sfxVolumeSlider.minValue = 0f;
+            sfxVolumeSlider.maxValue = 1f;
+            sfxVolumeSlider.value = AudioManager.Instance != null ? AudioManager.Instance.SFXVolume : 1f;
+            sfxVolumeSlider.onValueChanged.AddListener(OnSFXVolumeChanged);
         }
 
         SetupResolutionDropdown();
@@ -74,15 +85,23 @@ private void Awake()
 
     /// <summary>MainMenuController.settingsPanelRoot yerine doğrudan bu metod da kullanılabilir
     /// (panelRoot atanmışsa SetActive(true) ile aynı işi yapar).</summary>
+    // BUG DUZELTMESI (HUD'a Ayarlar butonu eklenirken fark edildi): Hide() eskiden
+    // mainMenuPanelRoot'u KOSULSUZ tekrar aciyordu - bu sadece Ana Menu'den acilinca dogruydu.
+    // Artik Show() aninda mainMenuPanelRoot'un o anki durumu hatirlaniyor, Hide() da AYNI duruma
+    // donuyor - boylece oyun ici HUD'dan acilinca (mainMenuPanelRoot zaten kapaliyken) kapatinca
+    // Ana Menu oyunun ustune binmiyor; Ana Menu'den acilinca (eskisi gibi) davranis degismiyor.
+    private bool mainMenuWasActiveBeforeShow;
+
     public void Show()
     {
+        if (mainMenuPanelRoot != null) mainMenuWasActiveBeforeShow = mainMenuPanelRoot.activeSelf;
         if (panelRoot != null) panelRoot.SetActive(true);
     }
 
     public void Hide()
     {
         if (panelRoot != null) panelRoot.SetActive(false);
-        if (mainMenuPanelRoot != null) mainMenuPanelRoot.SetActive(true);
+        if (mainMenuPanelRoot != null) mainMenuPanelRoot.SetActive(mainMenuWasActiveBeforeShow);
     }
 
     private void OnSesTabClicked()
@@ -108,9 +127,14 @@ private void Awake()
         if (kontrollerPanel != null) kontrollerPanel.SetActive(index == 2);
     }
 
-    private void OnMasterVolumeChanged(float value)
+    private void OnMusicVolumeChanged(float value)
     {
-        AudioListener.volume = value;
+        if (AudioManager.Instance != null) AudioManager.Instance.SetMusicVolume(value);
+    }
+
+    private void OnSFXVolumeChanged(float value)
+    {
+        if (AudioManager.Instance != null) AudioManager.Instance.SetSFXVolume(value);
     }
 
     private void SetupResolutionDropdown()

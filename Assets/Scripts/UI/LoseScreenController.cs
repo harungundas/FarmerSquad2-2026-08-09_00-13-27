@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using TMPro;
+using Unity.Netcode;
 
 /// <summary>
 /// GDD Bolum 10.8 mockup (Iflas Ekrani): Gun X Sonu Kaybedildi, Gerekli/Bakiye/Acik gosterimi +
@@ -76,17 +78,34 @@ public class LoseScreenController : MonoBehaviour
         if (deficitText != null) deficitText.text = "Açık: Veri yok";
     }
 
-    /// <summary>[Tekrar Dene] (BlueBtn). Gercek sahne/oyun yeniden baslatma baglantisi Ana Menu &
-    /// Lobi UI'ya (T40/T41) bagli - bu task'in kapsami DEGIL, kasitli stub (WinScreenController
-    /// T38'deki ayni desen).</summary>
+    /// <summary>[Tekrar Dene] (BlueBtn). BUG DUZELTMESI (kullanici raporu: butonlar hic bir sey
+    /// yapmiyordu - eski kod sadece Debug.Log basan kasitli stub'ti, T40/T41 tamamlandigi halde
+    /// hic baglanmamisti). Tek-sahne proje oldugu icin (MainMenuController Awake yorumu) hem
+    /// Tekrar Dene hem Ana Menuye Don ayni RestartGame() akisini kullanir: NetworkManager kapatilir,
+    /// sahne yeniden yuklenir - MainMenuController.Awake() Ana Menu panelini tekrar acar.</summary>
     private void OnRetryClicked()
     {
-        Debug.Log("[LoseScreenController] Tekrar Dene tiklandi - sahne yeniden baslatma T40/T41'e bagli, henuz kurulu degil.");
+        Debug.Log("[LoseScreenController] Tekrar Dene tiklandi.");
+        RestartGame();
     }
 
-    /// <summary>[Ana Menüye Dön] (GrayBtn). Ayni sekilde T40'a bagli, kasitli stub.</summary>
+    /// <summary>[Ana Menüye Dön] (GrayBtn). Ayni RestartGame() akisi (bkz. OnRetryClicked yorumu).</summary>
     private void OnMainMenuClicked()
     {
-        Debug.Log("[LoseScreenController] Ana Menuye Don tiklandi - Ana Menu sahne gecisi T40'a bagli, henuz kurulu degil.");
+        Debug.Log("[LoseScreenController] Ana Menuye Don tiklandi.");
+        RestartGame();
+    }
+
+    /// <summary>NetworkManager'i temiz sekilde kapatir (spawned NetworkObject'lerin despawn
+    /// edilmeden sahne ile birlikte yok olmasindan kaynaklanabilecek NGO hatalarini onlemek icin)
+    /// ve aktif sahneyi yeniden yukler. Tek-sahne projede bu, Ana Menu'ye donmenin tek yolu.</summary>
+    private void RestartGame()
+    {
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.Shutdown();
+        }
+
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

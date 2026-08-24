@@ -88,6 +88,14 @@ public class MarketManager : NetworkBehaviour
         OpenMarket(dayCycleManager != null ? dayCycleManager.CurrentDay.Value : 0);
     }
 
+[ServerRpc(RequireOwnership = false)]
+    public void ClosePreviewServerRpc()
+    {
+        if (!IsServer) return;
+        IsOpen.Value = false;
+    }
+
+
     [ServerRpc(RequireOwnership = false)]
     public void RequestEndDayServerRpc()
     {

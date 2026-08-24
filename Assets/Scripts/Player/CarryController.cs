@@ -43,7 +43,16 @@ public class CarryController : MonoBehaviour
     //   ikinci alinan hayvan (slot 1) SOL kola gelir (carriedAnimals listesine ekleme sirasiyla
     //   birebir eslesir, bu yuzden sira degismez).
     private static readonly Vector3 SingleCarryOffset = new Vector3(0.25f, 1.3f, 0.3f);
-    private static readonly Vector3[] TwoCarryOffsets = { new Vector3(0.3f, 1.2f, 0.5f), new Vector3(-0.3f, 1.2f, 0.5f) };
+    // BUG DUZELTMESI (kullanici bildirdi: Sisman'da iki hayvan neredeyse ic ice gorunuyordu):
+    // x farki eskiden 0.3-(-0.3)=0.6 birimdi, dunya 8x buyuklukte oldugu icin gorsel olarak
+    // yetersizdi. Artik x=+7/-7 (aralarinda TOPLAM 7 birim, TwoCarryDropOffsets ile AYNI
+    // mesafe) kullaniliyor.
+    private static readonly Vector3[] TwoCarryOffsets = { new Vector3(3.5f, 1.2f, 0.5f), new Vector3(-3.5f, 1.2f, 0.5f) };
+    // BUG DUZELTMESI: Sisman iki hayvani ayni anda birakinca aralarinda hic mesafe yoktu
+    // (eski dropOffset sadece transform.forward'da index'e gore ufak bir kaydirma yapiyordu).
+    // Simdi TwoCarryOffsets ile AYNI 7 birimlik yanal (transform.right) araligi kullaniyoruz,
+    // z=2 ile karakterin biraz onune, SnapToGround zemine oturtuyor (y onemsiz, 0 birakildi).
+    private static readonly Vector3[] TwoCarryDropOffsets = { new Vector3(3.5f, 0f, 2f), new Vector3(-3.5f, 0f, 2f) };
     private static readonly Quaternion SingleCarryRotationOffset = Quaternion.Euler(0f, 90f, 0f); // saga bakar
 
     private void Awake()
@@ -59,9 +68,27 @@ private void Update()
         var keyboard = Keyboard.current;
         if (keyboard == null) return;
 
-        int capacity = playerController.classData != null ? playerController.classData.carryCapacityLight : 1;
-        bool isFull = carriedAnimals.Count >= capacity;
-        AnimalBase nearest = isFull ? null : FindNearestCarryableAnimal(capacity);
+        // BUG DUZELTMESI (kullanici tasarim duzeltmesi): Sisman aslinda "2 hafif VEYA 1 agir"
+        // tasiyabilmeliydi (El Arabasi'ndaki 3 hafif/1 agir mantiginin kisisel tasima karsiligi),
+        // eskiden ise capacity>1 oldugu icin agir hayvanlar TAMAMEN engelleniyordu. Yeni kural:
+        // - Su an AGIR bir hayvan tasiniyorsa: kapasite doldu sayilir (agir=tek basina 1 hak).
+        // - Degilse: normal karakterlerde oldugu gibi classData.carryCapacityLight limiti gecerli
+        //   (Sisman icin 2, digerlerinde 1) - ama bu ikinci/uçuncu slot SADECE hafif hayvanlar icin.
+        int maxLightSlots = playerController.classData != null ? playerController.classData.carryCapacityLight : 1;
+        bool carryingHeavy = false;
+        for (int ci = 0; ci < carriedAnimals.Count; ci++)
+        {
+            var carried = carriedAnimals[ci];
+            if (carried != null && carried.animalData != null && carried.animalData.weightClass == AnimalWeightClass.Heavy)
+            {
+                carryingHeavy = true;
+                break;
+            }
+        }
+        bool isFull = carryingHeavy || carriedAnimals.Count >= maxLightSlots;
+        // Zaten bir sey tasiniyorsa (Sisman'in ilk hafif hayvani gibi), 2. slot SADECE hafif kabul eder.
+        bool mustBeLight = carriedAnimals.Count > 0;
+        AnimalBase nearest = isFull ? null : FindNearestCarryableAnimal(mustBeLight);
 
         // BUG DUZELTMESI (kullanici karari): eskiden E BASILI TUTMAK gerekiyordu (pickupHoldDuration).
         // Artik TEK E BASISI yeterli - hem alma hem birakma icin wasPressedThisFrame kullanilir.
@@ -137,9 +164,11 @@ private void Update()
     }
 
     
-private AnimalBase FindNearestCarryableAnimal(int capacity)
+private AnimalBase FindNearestCarryableAnimal(bool lightOnly)
     {
-        bool lightOnly = capacity > 1; // Sadece Sisman (capacity=2) hafif-hayvan kisitina tabi.
+        // lightOnly artik CAGIRAN (Update) tarafindan hesaplaniyor: zaten bir hayvan
+        // tasiniyorsa (Sisman'in 2. slotu) sadece hafif hayvanlar aranir; hicbir sey
+        // tasinmiyorsa (ilk secim) herkes icin herhangi bir agirlik uygun.
 
         Collider[] hits = Physics.OverlapSphere(transform.position, carryRange);
         AnimalBase nearest = null;
@@ -187,17 +216,22 @@ private void PickUp(AnimalBase animal)
         // sonuc, karakterin scale'i ne olursa olsun (0.08, 1, veya baska bir govde kopyasinda
         // farkli bir deger) HER ZAMAN ayni gercek-dunya mesafesinde (~0.3-1.3m) kalir.
         int capacityForRotation = playerController.classData != null ? playerController.classData.carryCapacityLight : 1;
-        bool isTwoCarry = capacityForRotation > 1; // sadece Sisman
+        bool canCarryTwoLight = capacityForRotation > 1; // sadece Sisman
+        bool isHeavyAnimal = animal.animalData != null && animal.animalData.weightClass == AnimalWeightClass.Heavy;
 
         Vector3 offsetLocal;
         Quaternion rotationOffset;
-        if (isTwoCarry)
+        if (canCarryTwoLight && !isHeavyAnimal)
         {
+            // Sisman + hafif hayvan: omuz-yani (iki hafif yan yana sigabilir) pozu.
             offsetLocal = TwoCarryOffsets[Mathf.Min(slot, TwoCarryOffsets.Length - 1)];
             rotationOffset = Quaternion.identity; // Sisman'da hayvanlar ONE bakar
         }
         else
         {
+            // BUG DUZELTMESI (kullanici tasarim duzeltmesi): Sisman agir hayvan (Inek/At)
+            // tasidiginda (tek basina, max 1) diger karakterlerle AYNI genel tek-tasima
+            // pozunu kullanir - omuz-yani pozu sadece 2 hafif hayvan icin anlamli.
             offsetLocal = SingleCarryOffset;
             rotationOffset = SingleCarryRotationOffset; // digger karakterlerde hayvan SAGA bakar
         }
@@ -230,7 +264,17 @@ private void PickUp(AnimalBase animal)
         var carriedColliders = animal.GetComponents<Collider>();
         foreach (var col in carriedColliders) col.enabled = false;
 
-        if (animator != null) animator.SetBool("IsCarrying", true);
+        if (animator != null)
+        {
+            // BUG DUZELTMESI (ikinci tasimada animasyon kilitleniyor): CarryWalkStop Trigger
+            // onceki bir tasima dongusunde ARMED kalmis olabilir (Carrying disinda baska bir
+            // state'e gecerken tuketilmemis olabilir) - bu durumda Carrying state'ine yeniden
+            // girildigi an, bekleyen trigger aninda WalkStop_Carrying'e atlatiyordu (hareket
+            // durumundan bagimsiz "idle/stuck" gorunumu). Her yeni sirtlamada bu trigger'i
+            // ACIKCA temizliyoruz.
+            animator.ResetTrigger("CarryWalkStop");
+            animator.SetBool("IsCarrying", true);
+        }
 
         Debug.Log("[CarryController] " + gameObject.name + " hayvani sirtladi: " + animal.gameObject.name +
                    " (" + carriedAnimals.Count + "/" + (playerController.classData != null ? playerController.classData.carryCapacityLight : 1) + ")" +
@@ -245,7 +289,20 @@ private void DropAll()
             if (animal == null) continue;
 
             animal.transform.SetParent(null);
-            Vector3 dropOffset = transform.forward * (1f + i * 0.6f);
+
+            Vector3 dropOffset;
+            if (carriedAnimals.Count > 1)
+            {
+                // Sisman iki hayvan tasiyordu - TwoCarryOffsets ile AYNI 7 birimlik araligi
+                // yanal (transform.right) olarak koru, boylece birakilan hayvanlar da
+                // tasinirkenki kadar acik dursun.
+                Vector3 offsetLocal = TwoCarryDropOffsets[Mathf.Min(i, TwoCarryDropOffsets.Length - 1)];
+                dropOffset = transform.right * offsetLocal.x + transform.forward * offsetLocal.z;
+            }
+            else
+            {
+                dropOffset = transform.forward * (1f + i * 0.6f);
+            }
             animal.transform.position = transform.position + dropOffset;
 
             var rb = animal.GetComponent<Rigidbody>();
@@ -253,7 +310,15 @@ private void DropAll()
             {
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
-                rb.isKinematic = false;
+                // BUG DUZELTMESI (kullanici bildirdi: kecinin yerin dibine girmesi): SnapToGround
+                // zaten raycast ile hayvani dogru zemin yuksekligine oturtuyor (asagidaki cagriya
+                // bak) - fizigin bunu "dogrulamasina"/duzeltmesine GEREK yok ve GUVENILMEZ (ayni
+                // dosyadaki SnapToGround yorumu zaten bunu belgeliyor: asset paketleri arasi
+                // fizik kurulumu tutarsiz). isKinematic=false birakinca collider boyutu/merkezi
+                // ile terrain arasindaki kucuk uyusmazliklarda yer cekimi hayvani zemine gomuyor
+                // ya da disari firlatiyordu ("ucma"). isKinematic=true olarak birakip SADECE
+                // raycast-tabanli yerlesime guveniyoruz.
+                rb.isKinematic = true;
             }
 
             var controller = animal.GetComponent<CharacterController>();
@@ -279,6 +344,13 @@ private void DropAll()
         Debug.Log("[CarryController] " + gameObject.name + " " + carriedAnimals.Count + " hayvani birakti.");
         carriedAnimals.Clear();
 
-        if (animator != null) animator.SetBool("IsCarrying", false);
+        if (animator != null)
+        {
+            // Ayni sebep (yukaridaki PickUp yorumuna bak): birakma aninda da bekleyen bir
+            // CarryWalkStop tetiklenmesi olabilir - bir sonraki sirtlamayi kirletmesin diye
+            // burada da temizliyoruz.
+            animator.ResetTrigger("CarryWalkStop");
+            animator.SetBool("IsCarrying", false);
+        }
     }
 }

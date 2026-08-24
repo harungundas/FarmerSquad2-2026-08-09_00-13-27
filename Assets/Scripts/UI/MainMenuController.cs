@@ -119,6 +119,11 @@ private void Awake()
     /// <summary>[Lobi Oluştur] (BlueBtn). LobbySessionManager.CreateLobby() ile GERÇEK (hardcoded
     /// olmayan) 4 haneli lobi kodu üretir (TASKS.md T50), sonra GameNetworkManager.StartHost()
     /// çağırır. Menü paneli kapanır, LobbyUI üretilen gerçek kodla açılır.</summary>
+    /// <summary>KULLANICI KARARI (Steamworks YOK, NetworkManager gercek LAN host/client
+    /// baglantisini yonetsin): sahte LobbySessionManager.CreateLobby() KALDIRILDI - artik
+    /// dogrudan gameNetworkManager.StartHost() cagriliyor (tum ag arayuzlerinde dinlemeye
+    /// baslar), LobbyUI.Show() gercek NetworkManager.IsHost durumuna gore host'un LAN IP'sini
+    /// gosterir (arkadasina soyleyecegi adres).</summary>
     private void OnCreateLobbyClicked()
     {
         if (gameNetworkManager == null)
@@ -127,11 +132,15 @@ private void Awake()
             return;
         }
 
-        LobbySessionManager.LobbyInfo info = LobbySessionManager.CreateLobby(CurrentUsername);
+        bool started = gameNetworkManager.StartHost();
+        if (!started)
+        {
+            Debug.LogError("[MainMenuController] Host baslatilamadi.");
+            return;
+        }
 
-        gameNetworkManager.StartHost();
         if (panelRoot != null) panelRoot.SetActive(false);
-        ShowLobbyUI(info.lobbyCode);
+        ShowLobbyUI(0);
     }
 
     /// <summary>[Lobiye Katıl] (BlueBtn). T50 ONCESI dogrudan StartClient() cagiriyordu; ARTIK
@@ -185,10 +194,28 @@ private void Awake()
     /// kendi panelini kurup burayi baglayacak).</summary>
     private void OnSettingsClicked()
     {
+        // BUG DUZELTMESI (kullanici bildirdi: Ayarlar'i Ana Menu'den acip Geri'ye basinca
+        // doğrudan oyuna atiyordu): bu metod T42 oncesi yazilmis bir stub'du, settingsPanelRoot'u
+        // DOGRUDAN SetActive(true) yapiyordu - SettingsUI.Show() UZERINDEN GECMIYORDU. SettingsUI
+        // artik Hide()'da "Show() aninda Ana Menu acik miydi" bilgisini kullanarak geri donuyor
+        // (bkz. SettingsUI.cs) - bu metod Show()'u ATLADIGI icin o bilgi hic guncellenmiyordu ve
+        // Hide() Ana Menu'yu YANLIŞLIKLA kapali sanıp tekrar acmiyordu. Artik SettingsUI.Show()
+        // uzerinden aciliyor, boylece dogru state takip ediliyor.
         if (settingsPanelRoot != null)
         {
-            if (panelRoot != null) panelRoot.SetActive(false);
-            settingsPanelRoot.SetActive(true);
+            // NOT: SettingsUI komponenti settingsPanelRoot'un KENDISINDE degil, PARENT'inda
+            // (SettingsCanvas) - GetComponent yerine GetComponentInParent kullanilmali.
+            var settingsUI = settingsPanelRoot.GetComponentInParent<SettingsUI>();
+            if (settingsUI != null)
+            {
+                settingsUI.Show();
+            }
+            else
+            {
+                // SettingsUI komponenti bulunamadi (beklenmedik durum) - eski stub davranisina dus.
+                if (panelRoot != null) panelRoot.SetActive(false);
+                settingsPanelRoot.SetActive(true);
+            }
         }
         else
         {

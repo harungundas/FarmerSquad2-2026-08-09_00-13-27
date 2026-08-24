@@ -38,6 +38,8 @@ public class StandInteraction : NetworkBehaviour
     
     [Header("Teslimat Onay Ekrani")]
     public DeliveryConfirmUI deliveryConfirmUI;
+    [Tooltip("Offered/FinalOffered asamasinda F ile ac/kapa (toggle) edilecek pazarlik paneli - Geri butonuyla kapatildiktan sonra tekrar acabilmek icin gerekli.")]
+    public NegotiationUI negotiationUI;
 public VehicleSpawner vehicleSpawner;
 
     [Header("Etkileşim (trigger collider boyutu)")]
@@ -88,11 +90,23 @@ public VehicleSpawner vehicleSpawner;
 
 private void Update()
     {
+        // Sadece aday olarak kaydol (InteractionArbiter.cs) - asil karar LateUpdate'te.
+        if (playerInRange == null) return;
+        float distSqr = (playerInRange.transform.position - transform.position).sqrMagnitude;
+        InteractionArbiter.Register(this, distSqr);
+    }
+
+    private void LateUpdate()
+    {
         if (playerInRange == null)
         {
             if (InteractionIndicator.Instance != null) InteractionIndicator.Instance.Hide();
             return;
         }
+
+        // BUG DUZELTMESI: bilgisayar da menzildeyse ve ondan yakinsa, bu frame'i o kazanir -
+        // biz ne prompt gosteririz ne de F'i isleriz (InteractionArbiter.cs).
+        if (!InteractionArbiter.IsWinner(this)) return;
 
         UpdatePrompt();
 
@@ -107,7 +121,7 @@ private void Update()
 
     /// <summary>Kasanin mevcut asamasina gore InteractionIndicator prompt metnini gunceller
     /// ("F - Bas - Kasayi Kullan" / "F - Bas - Teslimati Onayla" / mesgul).</summary>
-    private void UpdatePrompt()
+private void UpdatePrompt()
     {
         if (InteractionIndicator.Instance == null) return;
 
@@ -120,6 +134,10 @@ private void Update()
         else if (stage == NegotiationStage.AwaitingDelivery)
         {
             InteractionIndicator.Instance.Show(transform, "F - Bas - Teslimatı Onayla");
+        }
+        else if (stage == NegotiationStage.Offered || stage == NegotiationStage.FinalOffered)
+        {
+            InteractionIndicator.Instance.Show(transform, "F - Bas - Pazarlığı Göster/Gizle");
         }
         else
         {
@@ -137,11 +155,6 @@ private void TryOpenNegotiation()
 
         var currentStage = negotiationManager.State.Value.stage;
 
-        // Kullanici geri bildirimi sonrasi eklendi: fiyat AwaitingDelivery'de kilitliyken
-        // (oyuncu hayvanlari teslimat alanina tasiyip kasaya DONDUGUNDE) F artik dogrudan
-        // finalize etmez - once bir onay ekrani (DeliveryConfirmUI.Show/Hide) acar, siparis
-        // detayini ve canli dogru/yanlis durumunu gosterir. RequestFinalizeDeliveryServerRpc
-        // SADECE o ekrandaki [Teslim Et] butonuna basilinca cagrilir.
         if (currentStage == NegotiationStage.AwaitingDelivery)
         {
             if (deliveryConfirmUI != null)
@@ -156,35 +169,70 @@ private void TryOpenNegotiation()
             return;
         }
 
+        // KULLANICI ISTEGI: kasa ekranina da "Geri" butonu eklendi (NegotiationUI.cs). Panel
+        // artik SADECE state degisince otomatik acilmiyor - F ile Offered/FinalOffered
+        // asamasinda ac/kapa (toggle) edilebiliyor, boylece Geri ile kapatilan panel tekrar
+        // F ile acilabiliyor.
+        if (currentStage == NegotiationStage.Offered || currentStage == NegotiationStage.FinalOffered)
+        {
+            if (negotiationUI != null)
+            {
+                if (negotiationUI.IsOpen) negotiationUI.Hide();
+                else negotiationUI.Show();
+            }
+            else
+            {
+                Debug.LogWarning("[StandInteraction] negotiationUI atanmamis, ac/kapa yapilamiyor.");
+            }
+            return;
+        }
+
         if (currentStage != NegotiationStage.Inactive)
         {
             Debug.Log("[StandInteraction] Stant meşgul, pazarlık açılamadı (yerel kontrol).");
             return;
         }
 
+        // BUG DUZELTMESI (2-client testinde bulundu: client'ta F hicbir sey yapmiyordu,
+        // konsolda sessizce "bekleyen musteri yok" logu basiliyordu): vehicleSpawner.queue
+        // (ve CustomerVehicle.IsWaitingAtStand) duz C# alanlar - NetworkList/NetworkVariable
+        // DEGIL, sadece SUNUCUDA dolduruluyor. Client'in kendi VehicleSpawner kopyasinda bu
+        // liste HER ZAMAN BOS - yani "bekleyen arac var mi" kontrolu client'ta asla dogru
+        // sonuc veremezdi. Cozum: bu kontrolu ve pazarlik baslatmayi TAMAMEN SUNUCUYA tasi
+        // (asagidaki yeni ServerRpc, ki SADECE sunucuda calisir ve orada queue GECERLIDIR).
         if (vehicleSpawner == null)
         {
             Debug.LogWarning("[StandInteraction] vehicleSpawner atanmamis.");
             return;
         }
 
+        RequestOpenNegotiationServerRpc(playerInRange.OwnerClientId);
+    }
+
+    /// <summary>SADECE SUNUCUDA calisir - vehicleSpawner.queue burada GECERLI/GUNCEL oldugu
+    /// icin bekleyen musteriyi burada arayip pazarligi burada baslatiyoruz (client-tarafi
+    /// kontrol yerine).</summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestOpenNegotiationServerRpc(ulong requestingClientId)
+    {
+        if (negotiationManager == null || vehicleSpawner == null) return;
+        if (negotiationManager.State.Value.stage != NegotiationStage.Inactive)
+        {
+            Debug.Log("[StandInteraction] (sunucu) Zaten aktif bir pazarlik var, istek reddedildi.");
+            return;
+        }
+
         var waitingVehicle = vehicleSpawner.GetVehicleWaitingAtStand();
         if (waitingVehicle == null)
         {
-            Debug.Log("[StandInteraction] StandFront'ta bekleyen müşteri yok, pazarlık açılamadı.");
+            Debug.Log("[StandInteraction] (sunucu) StandFront'ta bekleyen müşteri yok, pazarlık açılamadı.");
             return;
         }
 
         var order = waitingVehicle.CurrentOrder;
         negotiationManager.RequestStartNegotiationServerRpc(order.species, order.count, order.direction, order.basePrice);
 
-        BroadcastNegotiationStartedServerRpc(playerInRange.OwnerClientId);
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void BroadcastNegotiationStartedServerRpc(ulong startingClientId)
-    {
-        NotifyNegotiationStartedClientRpc(startingClientId);
+        NotifyNegotiationStartedClientRpc(requestingClientId);
     }
 
     [ClientRpc]

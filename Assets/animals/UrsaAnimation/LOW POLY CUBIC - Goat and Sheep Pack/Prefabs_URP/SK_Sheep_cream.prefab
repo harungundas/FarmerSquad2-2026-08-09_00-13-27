@@ -1930,7 +1930,7 @@ MonoBehaviour:
   SceneMigrationSynchronization: 1
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
+  AutoObjectParentSync: 0
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
 --- !u!114 &7607961302688271486
@@ -1986,8 +1986,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.459, y: 1.3899, z: 1.5856}
-  m_Center: {x: 0.0013, y: 0.6377, z: 0.1878}
+  m_Size: {x: 0.25245, y: 0.764445, z: 1.5856}
+  m_Center: {x: 0.0013, y: 0.32495004, z: 0.1878}
 --- !u!114 &5515080064495891225
 MonoBehaviour:
   m_ObjectHideFlags: 0

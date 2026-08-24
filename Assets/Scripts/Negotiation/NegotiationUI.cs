@@ -30,22 +30,27 @@ public class NegotiationUI : MonoBehaviour
     public TextMeshProUGUI offerText;
     public TextMeshProUGUI riskText;
     public TextMeshProUGUI playerInputText;
+    [Tooltip("KULLANICI ISTEGI: Satista musteri teklifinden az / Alimda musteri teklifinden fazla teklif girilirse kisa uyari burada gosterilir. Atanmazsa riskText uzerine gecici olarak yazilir.")]
+    public TextMeshProUGUI warningText;
     public Button negotiateButton;
     public Button acceptButton;
     public Button rejectButton;
+    [Tooltip("KULLANICI ISTEGI: paneli SADECE lokal olarak gizler - hicbir sunucu istegi gondermez, pazarlik state'i degismez. StandInteraction F ile tekrar acabilir (toggle).")]
+    public Button backButton;
 
     [Header("Numpad (child'lari GrayBtn instance'lari, her birinin TMP Text'i '1'..'9','0','.','<' olmali)")]
     public Transform numpadContainer;
 
     private string typedValue = "";
 
-    private void Awake()
+private void Awake()
     {
         if (panelRoot != null) panelRoot.SetActive(false);
 
         if (negotiateButton != null) negotiateButton.onClick.AddListener(OnNegotiateClicked);
         if (acceptButton != null) acceptButton.onClick.AddListener(OnAcceptClicked);
         if (rejectButton != null) rejectButton.onClick.AddListener(OnRejectClicked);
+        if (backButton != null) backButton.onClick.AddListener(OnBackClicked);
 
         SetupNumpad();
     }
@@ -123,8 +128,15 @@ public class NegotiationUI : MonoBehaviour
         if (!showPanel) return;
 
         string speciesTr = SpeciesToTurkish(state.species);
-        string directionTr = state.direction == OrderDirection.Satis ? "Satış" : "Alım";
-        if (orderText != null) orderText.text = "SİPARİŞ: " + state.count + "x " + speciesTr + " " + directionTr;
+        // KULLANICI BUG RAPORU DUZELTMESI: yon (Satış/Alım) eskiden sadece duz metinde tek
+        // kelimeydi, oyuncu gozden kaciriyordu. Artik RENKLI ve ACIKLAYICI (parantez ici ne
+        // anlama geldigini de yazan) bir satir olarak, kalin harflerle ayri satirda gosterilir.
+        bool isSale = state.direction == OrderDirection.Satis;
+        string directionLabel = isSale ? "SATIŞ - biz hayvan satıyoruz" : "ALIM - biz hayvan alıyoruz";
+        string directionColorHex = isSale ? "#4CAF50" : "#2196F3"; // yesil=Satis, mavi=Alim
+        if (orderText != null)
+            orderText.text = "SİPARİŞ: " + state.count + "x " + speciesTr +
+                              "\n<color=" + directionColorHex + "><b>" + directionLabel + "</b></color>";
 
         if (state.stage == NegotiationStage.Offered)
         {
@@ -168,7 +180,41 @@ public class NegotiationUI : MonoBehaviour
             return;
         }
 
+        var state = negotiationManager.State.Value;
+
+        // KULLANICI ISTEGI: Satista (biz satiyoruz) musterinin ilk teklifinden (baseOffer)
+        // DAHA AZ fiyat istenemez (zararina satis olur). Alimda (biz aliyoruz) ise musterinin
+        // istedigi fiyattan (baseOffer) DAHA FAZLA teklif edilemez (fazla odeme). Ihlal varsa
+        // istek sunucuya hic GONDERILMEZ, kisa bir uyari gosterilir.
+        if (state.direction == OrderDirection.Satis && value < state.baseOffer)
+        {
+            ShowValidationWarning("Satışta müşterinin teklifinden az fiyat veremezsin! (Min: " + state.baseOffer.ToString("0.##") + "$)");
+            return;
+        }
+        if (state.direction == OrderDirection.Alim && value > state.baseOffer)
+        {
+            ShowValidationWarning("Alımda müşterinin istediğinden fazla teklif veremezsin! (Max: " + state.baseOffer.ToString("0.##") + "$)");
+            return;
+        }
+
         negotiationManager.RequestNegotiateServerRpc(value);
+    }
+
+    /// <summary>KULLANICI ISTEGI: yon kurali ihlal edilince kisa, gecici bir uyari gosterir.
+    /// Ayri bir warningText atanmamissa riskText uzerine gecici olarak yazilir (bir sonraki
+    /// Refresh() cagrisinda dogal olarak eski haline doner).</summary>
+    private void ShowValidationWarning(string message)
+    {
+        if (warningText != null)
+        {
+            warningText.gameObject.SetActive(true);
+            warningText.text = message;
+        }
+        else if (riskText != null)
+        {
+            riskText.text = message;
+        }
+        Debug.Log("[NegotiationUI] " + message);
     }
 
     private void OnAcceptClicked()
@@ -186,6 +232,38 @@ public class NegotiationUI : MonoBehaviour
         if (stage == NegotiationStage.Offered) negotiationManager.RequestRejectBaseServerRpc();
         else if (stage == NegotiationStage.FinalOffered) negotiationManager.RequestRejectFinalServerRpc();
     }
+
+/// <summary>KULLANICI ISTEGI: "Geri" butonu - paneli sadece gizler, negotiationManager'a
+    /// HICBIR istek gondermez (Reddet gibi musteriyi kovmaz). StandInteraction F ile tekrar
+    /// acabilsin diye IsOpen/Show/Hide public olarak asagida saglaniyor.</summary>
+    private void OnBackClicked()
+    {
+        Hide();
+    }
+
+    public bool IsOpen => panelRoot != null && panelRoot.activeSelf;
+
+    /// <summary>StandInteraction, Offered/FinalOffered asamasinda F'e basilinca (panel Geri
+    /// ile kapatilmissa tekrar acmak icin) bunu cagirir. State degismedigi icin mevcut
+    /// negotiationManager.State.Value ile Refresh() yeniden cagrilir.</summary>
+    public void Show()
+    {
+        if (negotiationManager == null) return;
+        var s = negotiationManager.State.Value;
+        bool isMine = NetworkManager.Singleton != null && s.negotiatingClientId == NetworkManager.Singleton.LocalClientId;
+        if (!isMine || (s.stage != NegotiationStage.Offered && s.stage != NegotiationStage.FinalOffered))
+        {
+            Debug.LogWarning("[NegotiationUI] Show() cagirildi ama uygun asamada degil, gormezden geliniyor.");
+            return;
+        }
+        Refresh(s);
+    }
+
+    public void Hide()
+    {
+        if (panelRoot != null) panelRoot.SetActive(false);
+    }
+
 
     /// <summary>
     /// Reddetme riskini KESIN YUZDE olarak degil, belirsiz/gerilim yaratan bir ifade olarak

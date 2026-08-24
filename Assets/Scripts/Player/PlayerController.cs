@@ -30,11 +30,11 @@ public class PlayerController : NetworkBehaviour
     [Tooltip("El Arabasini iterken 0.5 (hiz %50 duser), aksi halde 1. Wheelbarrow.cs disaridan yazar.")]
     public float pushSpeedMultiplier = 1f;
 
-
-
     [Header("Jump")]
-    public float jumpUpForce = 6f;
+    public float jumpUpForce = 53f;
     public float groundCheckDistance = 1.0f;
+    [Tooltip("Kullanici karari (2.revizyon): sadece dusus fazini hizlandirmak yetersiz kaldi (cikis fazi hala yavasti, toplam sure yeterince kismiyordu). Artik CIKIS+INIS ikisinde birden uygulaniyor - yukseklik AYNI (~8m) kalsin diye jumpUpForce da orantili artirildi (20->53). 1 = normal (kapali).")]
+    public float airGravityMultiplier = 7f;
 
     [Header("Animation Locomotion Levels (gercek hizdan bagimsiz, BlendTree esikleriyle AYNI olmali)")]
     public float walkAnimSpeed = 16f;
@@ -42,7 +42,6 @@ public class PlayerController : NetworkBehaviour
 
     private Rigidbody rb;
     private Animator animator;
-    private bool wasMovingWhileCarrying = false;
     private Renderer[] bodyRenderers;
     private Collider[] bodyColliders;
 
@@ -102,7 +101,7 @@ public class PlayerController : NetworkBehaviour
         return Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, groundCheckDistance + 0.1f);
     }
 
-private void Update()
+    private void Update()
     {
         if (!IsOwner || !IsControllable.Value) return;
 
@@ -161,6 +160,15 @@ private void Update()
         Vector3 horizontalVelocity = moveDir * actualSpeed;
         rb.linearVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
 
+        // Kullanici karari (2. revizyon): havada gecirilen sureyi kissaltmak icin ARTIK hem
+        // cikis hem inis fazinda ekstra yercekimi uygulaniyor (SADECE dususte uygulamak yetersiz
+        // kalmisti, cikis hala yavasti). Yukseklik AYNI kalsin diye jumpUpForce buna orantili
+        // (20 -> 53) artirildi - bkz. Space kontrolu asagida.
+        if (!IsGrounded())
+        {
+            rb.linearVelocity += Vector3.up * Physics.gravity.y * (airGravityMultiplier - 1f) * Time.deltaTime;
+        }
+
         if (keyboard.spaceKey.wasPressedThisFrame && IsGrounded())
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpUpForce, rb.linearVelocity.z);
@@ -169,19 +177,16 @@ private void Update()
 
         if (animator != null)
         {
+            // BUG DUZELTMESI (kullanici bildirdi: tasirken durunca ~4-5sn animasyon kilitleniyordu):
+            // CarryWalkStop tetiklenince gecilen WalkStop_Carrying state'inin kullandigi klip
+            // (WalkToStopCarring.fbx) Mixamo'nun TAM ham kaydini kullaniyor (147 frame, ~4.9sn),
+            // kirpilmamis. Bu, hasExitTime=0.9 ile carpilinca ~4.4 saniyelik bir "kilitlenme"
+            // hissi yaratiyordu (tuslara basilsa da animasyon degismiyordu). CarryingBlendTree
+            // zaten Speed=0 esiginde ayri bir tasima-idle pozu iceriyor (dogrulandi), bu yuzden
+            // ayri bir "walk stop" gecis state'ine ihtiyac yok - trigger artik ATILMIYOR,
+            // WalkStop_Carrying state'i erisilemez (zararsiz) kaliyor. Klip ileride dogru araliga
+            // kirpilirse (Unity Animation penceresinde gorsel kontrolle), bu blok geri acilabilir.
             animator.SetFloat("Speed", animSpeed);
-
-            bool isCarrying = animator.GetBool("IsCarrying");
-
-            if (isCarrying)
-            {
-                if (!isMoving && wasMovingWhileCarrying) animator.SetTrigger("CarryWalkStop");
-                wasMovingWhileCarrying = isMoving;
-            }
-            else
-            {
-                wasMovingWhileCarrying = false;
-            }
         }
     }
 

@@ -1,19 +1,19 @@
-using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Unity.Netcode;
 
 /// <summary>
-/// [Lobiye Katıl] ekranı (ARCHITECTURE.md "## Ana Menü & Lobi UI" + "## Ortak UI Kiti",
-/// TASKS.md T50).
+/// [Lobiye Katıl] ekranı (ARCHITECTURE.md "## Ana Menü & Lobi UI").
 ///
-/// MainMenuCanvas/Panel/LobbyListPanel içinde, ProfilePanel (T49) ile AYNI modal desen
-/// kullanılır: ana menü paneli ARKADA açık kalır, bu panel üstüne biner.
-///
-/// BUG DUZELTMESI (kullanici istegi): Onceki surumde bu ekran LobbySessionManager.ActiveLobbies
-/// listesini satir satir gosteriyordu. Artik liste YOK - sadece tek bir lobi kodu input alani +
-/// [Lobiye Katil] butonu var. Kullanici kodu girer, OnJoinByCodeClicked() dogrudan
-/// LobbySessionManager.JoinLobby(code, ...) ile katilmayi dener.
+/// KULLANICI KARARI (Steamworks ISTEMIYORUM, NetworkManager kendi basina host/client
+/// yonetsin, LAN yeterli): Bu ekran ARTIK lobi KODU degil, hostun LAN IP adresini ister.
+/// Eskiden LobbySessionManager.JoinLobby(code,...) ile sahte bir listede arama yapiyordu -
+/// bu liste iki ayri bilgisayarin surecleri arasinda hic paylasilmadigi icin katilim HER
+/// ZAMAN basarisiz oluyordu. Artik dogrudan GameNetworkManager.StartClient(ip) cagrilir,
+/// basari/basarisizlik GERCEK NetworkManager olaylarindan (OnClientConnectedCallback /
+/// OnClientDisconnectCallback) anlasilir.
 /// </summary>
 public class LobbyListUI : MonoBehaviour
 {
@@ -23,10 +23,11 @@ public class LobbyListUI : MonoBehaviour
     [Header("Ana Menu Panel Kok (LobbyListPanel bunun ICINDE, T49 modal desenini korur)")]
     public GameObject mainMenuPanelRoot;
 
-    [Header("Lobi Kodu ile Katilim (liste yerine)")]
+    [Header("Host IP Adresi ile Katilim")]
+    [Tooltip("Placeholder/label metni Inspector'dan 'Lobi Kodu' yerine 'Host IP Adresi' olarak guncellenmeli - kod tarafinda zorunlu degil, sadece kullanici deneyimi icin.")]
     public TMP_InputField codeInputField;
     public Button joinByCodeButton;
-    public TextMeshProUGUI warningText;    // gecersiz/dolu kod uyarisi
+    public TextMeshProUGUI warningText;
 
     [Header("Ana Menu Donus")]
     public Button anaMenuButton;
@@ -35,34 +36,23 @@ public class LobbyListUI : MonoBehaviour
     public GameNetworkManager gameNetworkManager;
     public LobbyUI lobbyUI;
 
-/// <summary>ONEMLI: panelRoot BURADA SetActive(false) YAPILMAZ. Sahnede LobbyListPanel zaten
-    /// edit-time'da inactive kuruldu (bkz. hiyerarsi kurulumu). Eger panelRoot ilk kez BURADA
-    /// false yapilirsa, Show()'un panelRoot.SetActive(true) cagirdigi an GameObject ilk kez
-    /// aktiflesiyor olacagindan Unity Awake()'i O ANDA senkron tetikler - Awake icindeki
-    /// SetActive(false) da Show()'un SetActive(true)'sunun hemen ardindan calisip paneli tekrar
-    /// kapatir (bu bug T50 test asamasinda yakalandi ve duzeltildi). rowTemplate icin sorun
-    /// yok cunku o zaten ListContent altinda kalici inactive bir sablon.</summary>
-private void Awake()
+    private const float ConnectTimeoutSeconds = 8f;
+    private Coroutine connectTimeoutCoroutine;
+    private bool connectCallbacksHooked = false;
+
+    private void Awake()
     {
-        // DUZELTME (kullanici raporu - cift tiklama bug'i): panelRoot bu script'in kendi
-        // GameObject'i (LobbyListPanel) oldugu ve sahnede zaten inactive kuruldugu icin,
-        // burada tekrar SetActive(false) cagirmak Show()'un ilk SetActive(true)'sinin
-        // TETIKLEDIGI senkron Awake cagrisi icinde paneli hemen kapatiyordu (ilk tiklama
-        // etkisiz gorunuyordu, ikinci tiklamada Awake tekrar calismadigindan calisiyordu).
-        // panelRoot.SetActive(false) satiri KASITLI olarak buradan kaldirildi.
         if (anaMenuButton != null) anaMenuButton.onClick.AddListener(OnAnaMenuClicked);
-        if (joinByCodeButton != null) joinByCodeButton.onClick.AddListener(OnJoinByCodeClicked);
+        if (joinByCodeButton != null) joinByCodeButton.onClick.AddListener(OnJoinClicked);
     }
 
-    /// <summary>MainMenuController.OnJoinLobbyClicked() tarafindan cagirilir. Ana menu panelini
-    /// acik tutar (T49 modal deseni), kod giris panelini acar. BUG DUZELTMESI (kullanici
-    /// istegi): liste yerine sadece lobi kodu input'u istenir.</summary>
     public void Show()
     {
         if (mainMenuPanelRoot != null) mainMenuPanelRoot.SetActive(true);
         if (panelRoot != null) panelRoot.SetActive(true);
         if (warningText != null) warningText.text = "";
         if (codeInputField != null) codeInputField.text = "";
+        if (joinByCodeButton != null) joinByCodeButton.interactable = true;
     }
 
     public void Hide()
@@ -70,60 +60,114 @@ private void Awake()
         if (panelRoot != null) panelRoot.SetActive(false);
     }
 
-/// <summary>[Lobiye Katil]. Input alanindaki kodu okur, LobbySessionManager.JoinLobby ile
-    /// katilmaya calisir. Kod bos/gecersizse, lobi doluysa veya yoksa warningText'te sebep
-    /// gosterilir. Basarili olursa StartClient() cagirir ve LobbyUI'yi gercek lobi koduyla acar.</summary>
-    private void OnJoinByCodeClicked()
+    /// <summary>[Lobiye Katıl]. Input alanindaki METNI (artik sayisal kod DEGIL, IP adresi -
+    /// orn "192.168.1.5") okur, GameNetworkManager.StartClient(ip) ile gercek Netcode
+    /// baglanti girisimi baslatir. Sonuc NetworkManager'in kendi callback'leriyle asenkron
+    /// olarak belirlenir (bkz. OnConnectedToHost / OnDisconnectedFromHost / timeout).</summary>
+    private void OnJoinClicked()
     {
-        if (codeInputField == null || string.IsNullOrEmpty(codeInputField.text) || !int.TryParse(codeInputField.text, out int code))
+        if (codeInputField == null || string.IsNullOrWhiteSpace(codeInputField.text))
         {
-            if (warningText != null) warningText.text = "Gecerli bir lobi kodu girin.";
+            if (warningText != null) warningText.text = "Host'un IP adresini girin (örn: 192.168.1.5).";
             return;
         }
 
-        bool success = LobbySessionManager.JoinLobby(code, out LobbySessionManager.LobbyInfo info);
-
-        if (!success)
-        {
-            if (warningText != null)
-            {
-                warningText.text = (info.lobbyCode == code)
-                    ? (info.playerCount + "/" + LobbySessionManager.MaxPlayersPerLobby + " - Bu lobi DOLU, katilamazsin.")
-                    : "Bu kodda bir lobi bulunamadi.";
-            }
-            Debug.Log("[LobbyListUI] Katilim reddedildi (dolu/gecersiz), kod: " + code);
-            return;
-        }
-
-        if (warningText != null) warningText.text = "";
-
-        if (gameNetworkManager != null)
-        {
-            gameNetworkManager.StartClient();
-        }
-        else
+        if (gameNetworkManager == null)
         {
             Debug.LogError("[LobbyListUI] gameNetworkManager atanmamis.");
+            return;
         }
+
+        string ip = codeInputField.text.Trim();
+
+        if (warningText != null) warningText.text = "Bağlanılıyor...";
+        if (joinByCodeButton != null) joinByCodeButton.interactable = false;
+
+        bool started = gameNetworkManager.StartClient(ip);
+        if (!started)
+        {
+            if (warningText != null) warningText.text = "Bağlantı başlatılamadı.";
+            if (joinByCodeButton != null) joinByCodeButton.interactable = true;
+            return;
+        }
+
+        if (NetworkManager.Singleton != null && !connectCallbacksHooked)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback += OnConnectedToHost;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnDisconnectedFromHost;
+            connectCallbacksHooked = true;
+        }
+
+        if (connectTimeoutCoroutine != null) StopCoroutine(connectTimeoutCoroutine);
+        connectTimeoutCoroutine = StartCoroutine(ConnectTimeoutWatch());
+    }
+
+    /// <summary>ConnectTimeoutSeconds icinde baglanti kurulamazsa (host kapali, yanlis IP,
+    /// firewall vb.) girisimi iptal edip kullaniciyi bilgilendirir.</summary>
+    private IEnumerator ConnectTimeoutWatch()
+    {
+        yield return new WaitForSeconds(ConnectTimeoutSeconds);
+
+        if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsConnectedClient)
+        {
+            NetworkManager.Singleton.Shutdown();
+            CleanupConnectionAttempt();
+            if (warningText != null) warningText.text = "Bağlanılamadı. IP'yi, aynı ağda olduğunuzu ve arkadaşının host başlattığını kontrol et.";
+        }
+    }
+
+    /// <summary>Gercekten bize ait client baglaninca (host tarafinda BASKA oyuncular da
+    /// baglanabilir, bu yuzden clientId kontrolu sart) LobbyUI'yi acar.</summary>
+    private void OnConnectedToHost(ulong clientId)
+    {
+        if (NetworkManager.Singleton == null || clientId != NetworkManager.Singleton.LocalClientId) return;
+
+        CleanupConnectionAttempt();
+        if (warningText != null) warningText.text = "";
 
         Hide();
         if (mainMenuPanelRoot != null) mainMenuPanelRoot.SetActive(false);
 
         if (lobbyUI != null)
         {
-            lobbyUI.Show(info.lobbyCode);
+            lobbyUI.Show(0); // gercek baglantida sayisal "lobi kodu" kavraminin onemi yok
         }
         else
         {
-            Debug.LogWarning("[LobbyListUI] lobbyUI atanmamis, lobi sahnesi acilamadi.");
+            Debug.LogWarning("[LobbyListUI] lobbyUI atanmamis, lobi ekrani acilamadi.");
         }
 
-        Debug.Log("[LobbyListUI] Lobiye katildi, kod: " + info.lobbyCode + " (" + info.playerCount + "/" + LobbySessionManager.MaxPlayersPerLobby + ")");
+        Debug.Log("[LobbyListUI] Host'a basariyla baglanildi.");
     }
 
+    /// <summary>Baglanti GIRISIMI sirasinda (henuz gercekten baglanmadan) kopma/red olursa
+    /// tetiklenir - zaten baglanmis bir oyuncunun normal ayrilmasiyla KARISTIRILMAMALI.</summary>
+    private void OnDisconnectedFromHost(ulong clientId)
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsConnectedClient) return;
 
-    /// <summary>[Ana Menü]. Liste panelini kapatir; ana menu paneli zaten acik kaldigi icin
-    /// (T49 modal deseni) ekstra bir sey yapmaya gerek yok.</summary>
+        CleanupConnectionAttempt();
+        if (warningText != null) warningText.text = "Bağlantı reddedildi/koptu. IP'yi kontrol et.";
+    }
+
+    private void CleanupConnectionAttempt()
+    {
+        if (connectTimeoutCoroutine != null)
+        {
+            StopCoroutine(connectTimeoutCoroutine);
+            connectTimeoutCoroutine = null;
+        }
+
+        if (NetworkManager.Singleton != null && connectCallbacksHooked)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnConnectedToHost;
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnDisconnectedFromHost;
+        }
+        connectCallbacksHooked = false;
+
+        if (joinByCodeButton != null) joinByCodeButton.interactable = true;
+    }
+
     private void OnAnaMenuClicked()
     {
         Hide();

@@ -35,6 +35,9 @@ public class MarketUI : MonoBehaviour
     [Header("KIRMIZI Gunu Bitir butonu (kullanici istegi - kota kontrolu YAPAR)")]
     public Button endDayButton;
 
+    [Header("KULLANICI GERI BILDIRIMI: onizlemeyi gunu bitirmeden kapatan buton (gri/mavi, ClosePreviewServerRpc cagirir)")]
+    public Button closeButton;
+
 
 private void Awake()
     {
@@ -48,7 +51,7 @@ private void Awake()
         }
 
         if (nextDayButton != null) nextDayButton.onClick.AddListener(OnNextDayClicked);
-        if (endDayButton != null) endDayButton.onClick.AddListener(OnEndDayClicked);
+        if (closeButton != null) closeButton.onClick.AddListener(OnCloseClicked);
     }
 
     private void OnEnable()
@@ -142,16 +145,27 @@ private void Awake()
         marketManager.PurchaseUpgradeServerRpc(index);
     }
 
-    private void OnEndDayClicked()
+
+
+/// <summary>KULLANICI GERI BILDIRIMI SONRASI EKLENDI: bilgisayardan acilan onizlemeyi gunu
+    /// bitirmeden/upgrade almadan kapatir - MarketManager.ClosePreviewServerRpc SADECE
+    /// IsOpen'i false yapar, QuotaManager/DayCycleManager'a hicbir sekilde dokunmaz.</summary>
+    private void OnCloseClicked()
+    {
+        if (marketManager == null) return;
+        marketManager.ClosePreviewServerRpc();
+    }
+
+
+    
+/// <summary>KULLANICI ISTEGI: kirmizi [Gunu Bitir] butonu kaldirildi, onun islevi (kota
+    /// kontrolu YAPAN RequestEndDayServerRpc -> DayCycleManager.CompleteDayServer) bu TEK
+    /// kalan butona tasindi. CompleteDayServer artik basarili gunde marketi TEKRAR ACMIYOR,
+    /// dogrudan sonraki gune geciyor (bkz. DayCycleManager.cs) - yani bu buton hem kota
+    /// kontrolunu YAPAR hem de basariliysa sonraki gune GECER, tek tikla.</summary>
+    private void OnNextDayClicked()
     {
         if (marketManager == null) return;
         marketManager.RequestEndDayServerRpc();
-    }
-
-    
-private void OnNextDayClicked()
-    {
-        if (marketManager == null) return;
-        marketManager.RequestCloseAndAdvanceServerRpc();
     }
 }

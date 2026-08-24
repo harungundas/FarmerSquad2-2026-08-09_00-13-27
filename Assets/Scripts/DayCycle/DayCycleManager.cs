@@ -23,7 +23,7 @@ public class DayCycleManager : NetworkBehaviour
 
 
     [Header("Musteri Gelis Penceresi (GDD Bolum 5: 240sn kurali)")]
-    public float customerWindowSeconds = 240f;
+    public float customerWindowSeconds = 180f;
 
     [Header("Bagli Sistemler")]
     [Tooltip("240sn dolunca StopAcceptingCustomers() cagrilir.")]
@@ -165,14 +165,15 @@ private void StartDayServer(int day)
 
         BonusVehiclesToday.Value = (prestigeManager != null) ? prestigeManager.ConsumeBonusServer() : 0;
 
-        // BUG DUZELTMESI: Gun 1'e OZEL - VehicleSpawner artik kendi OnNetworkSpawn'inda otomatik
-        // spawn etmiyor (bkz. VehicleSpawner.cs notu), bu yuzden gercek oyunun ilk aracini burada,
-        // BeginGameServer -> StartDayServer(1) zincirinde biz baslatiyoruz. Sonraki gunlerde
-        // (StartNextDayServer -> StartDayServer) VehicleSpawner zaten kuyruk/spawn dongusunu
-        // kendi ic mantigiyla surdurur, tekrar BeginSpawning cagirmaya gerek yok.
-        if (day == 1 && vehicleSpawner != null)
+        // BUG DUZELTMESI (kullanici raporu: Gun 2+ hic arac gelmiyordu). Eski yorum
+        // "VehicleSpawner sonraki gunlerde kendi ic mantigiyla surdurur" dogru degildi -
+        // VehicleSpawner'da gun-ici tekrar spawn eden bir dongu hic yoktu. Artik HER gun
+        // basinda (Gun 1 dahil) BeginDayServer cagriliyor; o gun icin toplam arac sayisini
+        // (GetTotalVehicleCountForToday) customerWindowSeconds penceresine yayarak spawn eden
+        // gercek dongu VehicleSpawner.Update() icinde calisiyor.
+        if (vehicleSpawner != null)
         {
-            vehicleSpawner.BeginSpawning();
+            vehicleSpawner.BeginDayServer(GetTotalVehicleCountForToday(), customerWindowSeconds, day);
         }
 
         Debug.Log("[DayCycleManager] Gun " + day + " basladi. Pencere: " + customerWindowSeconds +
@@ -284,9 +285,6 @@ public void CompleteDayServer()
             return;
         }
 
-        // QuotaData.TryGetQuota sadece kota gunlerinde (3/6/9/12/15/18) true doner; digerlerinde
-        // IsBankrupt HICBIR sekilde degismez (ne true ne de reset) - bu QuotaManager'in (T30) mevcut
-        // davranisi, buradan degistirilmiyor.
         quotaManager.CheckQuotaServerRpc(dayJustFinished);
 
         if (quotaManager.IsBankrupt.Value)
@@ -305,10 +303,6 @@ public void CompleteDayServer()
             return;
         }
 
-        // T38: Gun 18 (QuotaData'daki SON kota gunu) basariyla gecildiyse oyun KAZANILIR -
-        // MarketManager ACILMAZ (bir sonraki gun yok, GDD Bolum 5: "Sonrasinda: Skor Tablosu
-        // ekrani -> New Game+ veya Ana Menu"). Onceden burada bu ayrim YOKTU, her basarili gun
-        // (Gun 18 dahil) koşulsuz MarketManager.OpenMarket() cagiriyordu - bkz. HANDOFF.md T38 notu.
         if (quotaManager.IsFinalQuotaDay(dayJustFinished))
         {
             Debug.Log("[DayCycleManager] Gun " + dayJustFinished + " (FINAL kota) basarili! Oyun KAZANILDI.");
@@ -325,21 +319,15 @@ public void CompleteDayServer()
             return;
         }
 
-        Debug.Log("[DayCycleManager] Gun " + dayJustFinished + " basarili (veya o gun kota yok). Market aciliyor.");
-
-        if (marketManager != null)
-        {
-            marketManager.OpenMarket(dayJustFinished);
-        }
-        else
-        {
-            Debug.LogWarning("[DayCycleManager] marketManager atanmamis (T33 henuz yok) - market acilamadi.");
-        }
-
-        // T33: Gun gecisi artik burada OTOMATIK yapilmiyor. MarketManager acildi (yukarida),
-        // oyuncu market'te istedigi upgrade'leri satin alip [Sonraki Gune Gec] butonuna basana
-        // kadar burada bekleniyor - o buton MarketManager.RequestCloseAndAdvanceServerRpc() ->
-        // AdvanceToNextDayServer() (asagida) zincirini tetikleyecek.
+        // KULLANICI ISTEGI: Market'teki KIRMIZI [Gunu Bitir] butonu kaldirildi, islevi TEK
+        // KALAN [Sonraki Gune Gec] butonuna eklendi (MarketUI.OnNextDayClicked artik
+        // RequestEndDayServerRpc -> buraya cagiriyor). Onceden burada basariliysa
+        // marketManager.OpenMarket() cagrilip market TEKRAR aciliyordu (oyuncu ayri bir
+        // ikinci tikla gune gecmek zorunda kaliyordu) - artik gerek yok, market zaten
+        // bilgisayardan onizleme olarak acilmisti (upgrade alma firsati orada verildi),
+        // kota gectiyse DOGRUDAN sonraki gune geciliyor.
+        Debug.Log("[DayCycleManager] Gun " + dayJustFinished + " basarili (veya o gun kota yok). Sonraki gune geciliyor.");
+        AdvanceToNextDayServer();
     }
 
     /// <summary>

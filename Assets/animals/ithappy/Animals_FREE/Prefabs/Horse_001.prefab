@@ -742,6 +742,7 @@ MonoBehaviour:
   animalData: {fileID: 11400000, guid: 7d445a8b21819af4cad01c34f5e6122a, type: 2}
   ownerPen: {fileID: 0}
   hunger: 100
+  countedInStock: 0
   IsBeingCarried: 0
 --- !u!114 &8864793445104432261
 MonoBehaviour:
@@ -766,7 +767,7 @@ MonoBehaviour:
   SceneMigrationSynchronization: 1
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
+  AutoObjectParentSync: 0
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
 --- !u!114 &8806639329013416785

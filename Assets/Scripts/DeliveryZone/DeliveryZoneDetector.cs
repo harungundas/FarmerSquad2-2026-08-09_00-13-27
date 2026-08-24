@@ -17,44 +17,61 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider))]
 public class DeliveryZoneDetector : MonoBehaviour
 {
-    private readonly List<AnimalBase> animalsInside = new List<AnimalBase>();
+    private BoxCollider zoneCollider;
+    private readonly List<AnimalBase> liveAnimalsInside = new List<AnimalBase>();
 
-    /// <summary>Su anda alanin icindeki hayvanlarin salt-okunur listesi (DeliveryResolver bunu okuyacak).</summary>
-    public IReadOnlyList<AnimalBase> AnimalsInside => animalsInside;
-
-    private void OnTriggerEnter(Collider other)
+    private void Awake()
     {
-        AnimalBase animal = other.GetComponent<AnimalBase>();
-        if (animal == null) return;
+        zoneCollider = GetComponent<BoxCollider>();
+    }
 
-        if (!animalsInside.Contains(animal))
+    /// <summary>
+    /// KULLANICI BUG RAPORU DUZELTMESI: eskiden OnTriggerEnter/Exit ile ADIM ADIM tutulan bir
+    /// liste kullaniliyordu. CarryController bir hayvani sirtlarken TUM Collider'larini devre
+    /// disi birakiyor (col.enabled=false, bkz. CarryController.PickUp) - hayvan bu sekilde
+    /// tasinip alan DISINA cikarildiginda Collider disable/enable dongusu OnTriggerExit'i
+    /// GUVENILIR sekilde tetiklemiyordu, bu yuzden hayvan haritada tamamen baska bir yerde
+    /// olsa bile eski liste onu hala "icerde" saniyordu (kullanici raporu: "alanda hayvan
+    /// yokken siparis onay ekraninda 1-2 hayvan gorunuyordu").
+    /// DUZELTME: artik hicbir kalici liste TUTULMUYOR - her okumada (AnimalsInside) alanin
+    /// GERCEK fiziksel icerigi Physics.OverlapBox ile SIFIRDAN hesaplaniyor. Tasinmakta olan
+    /// (IsBeingCarried=true, collider'lari zaten kapali) hayvanlar da dogal olarak sonuca
+    /// girmiyor (kapali collider + fiziksel sorgu onlari hic gormez), boylece "unutulmus
+    /// kayit" artik yapisal olarak MUMKUN DEGIL.
+    /// </summary>
+    public IReadOnlyList<AnimalBase> AnimalsInside
+    {
+        get
         {
-            animalsInside.Add(animal);
-            AnimalSpecies species = animal.animalData != null ? animal.animalData.species : default;
-            Debug.Log("[DeliveryZoneDetector] Teslimat alanina girdi: " + species);
+            liveAnimalsInside.Clear();
+
+            if (zoneCollider == null) zoneCollider = GetComponent<BoxCollider>();
+            if (zoneCollider == null) return liveAnimalsInside;
+
+            Bounds b = zoneCollider.bounds;
+            Collider[] hits = Physics.OverlapBox(b.center, b.extents, Quaternion.identity);
+
+            foreach (var hit in hits)
+            {
+                var animal = hit.GetComponentInParent<AnimalBase>();
+                if (animal == null) continue;
+                if (animal.IsBeingCarried) continue; // guvenlik agi: tasiniyorsa sayilmamali
+                if (liveAnimalsInside.Contains(animal)) continue; // ayni hayvanin birden fazla collider'i olabilir
+
+                liveAnimalsInside.Add(animal);
+            }
+
+            return liveAnimalsInside;
         }
     }
 
-    private void OnTriggerExit(Collider other)
-    {
-        AnimalBase animal = other.GetComponent<AnimalBase>();
-        if (animal == null) return;
-
-        if (animalsInside.Remove(animal))
-        {
-            AnimalSpecies species = animal.animalData != null ? animal.animalData.species : default;
-            Debug.Log("[DeliveryZoneDetector] Teslimat alanindan cikti: " + species);
-        }
-    }
-
-
-/// <summary>
-    /// NegotiationManager (T27 duzeltmesi) basarili teslimat sonrasi hayvani Destroy/Despawn
-    /// etmeden ONCE bunu cagirir - OnTriggerExit, obje yok edildiginde HER ZAMAN guvenilir
-    /// tetiklenmeyebildigi icin listeden elle cikartma garantisi saglar.
+    /// <summary>
+    /// ARTIK NO-OP: liste kalici tutulmadigi, her okumada canli hesaplandigi icin elle
+    /// cikartmaya gerek yok. NegotiationManager.RemoveDeliveredAnimals gibi eski cagiran
+    /// kodlar bozulmasin diye metod GERIYE DONUK UYUMLULUK icin bos birakildi.
     /// </summary>
     public void ClearAnimal(AnimalBase animal)
     {
-        animalsInside.Remove(animal);
+        // no-op (bkz. yukaridaki sinif yorumu)
     }
 }

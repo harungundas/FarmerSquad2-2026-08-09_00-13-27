@@ -131,6 +131,23 @@ public void RequestAcceptBaseServerRpc(ServerRpcParams rpcParams = default)
 
         if (s.direction == OrderDirection.Alim)
         {
+            // BUG DUZELTMESI (kullanici raporu: "param yokken hayvan alabildim, bakiye eksiye
+            // dustu"): eskiden Alim burada KOSULSUZ SpawnAlimAnimals+ProcessPayment yapiyordu,
+            // WalletManager.SubtractBalanceServerRpc de bakiyeyi kontrolsuz eksiltiyordu. Artik
+            // odeme yapilmadan ONCE bakiye kontrol ediliyor - yetmiyorsa alim GERCEKLESMEZ,
+            // musteri (reddedilmis gibi) ayrilir, oyuncuya HUD uyarisi gosterilir.
+            if (walletManager != null && walletManager.Balance.Value < s.finalOffer)
+            {
+                Debug.Log("[NegotiationManager] Yetersiz bakiye, Alim iptal edildi. Bakiye=" + walletManager.Balance.Value + " Gereken=" + s.finalOffer);
+                NotifyInsufficientFundsClientRpc();
+                s.stage = NegotiationStage.Resolved;
+                s.resolved = true;
+                s.accepted = false;
+                State.Value = s;
+                ConcludeDealAndReset();
+                return;
+            }
+
             SpawnAlimAnimals(s);
             ProcessPayment(s);
             if (gameStatsTracker != null) gameStatsTracker.ReportPurchaseServer(s.finalOffer);
@@ -170,6 +187,22 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
         if (!IsValidCaller(rpcParams, NegotiationStage.Offered)) return;
 
         var s = State.Value;
+
+        // KULLANICI ISTEGI (savunma katmani - asil kontrol NegotiationUI.cs'te client tarafinda
+        // yapiliyor, bu SADECE client atlanirsa/bypass edilirse diye bir guvenlik agi): Satista
+        // musterinin ilk teklifinden AZ, Alimda musterinin istedigi fiyattan FAZLA teklif kabul
+        // edilmez. Ihlal varsa istek sessizce YOK SAYILIR - State DEGISMEZ, pazarlik Offered
+        // asamasinda kalir, oyuncu istemcisi (dogru calisiyorsa zaten hic buraya gelmez) tekrar
+        // deneyebilir.
+        bool violatesDirectionRule =
+            (s.direction == OrderDirection.Satis && playerOfferedPrice < s.baseOffer) ||
+            (s.direction == OrderDirection.Alim && playerOfferedPrice > s.baseOffer);
+
+        if (violatesDirectionRule)
+        {
+            Debug.LogWarning("[NegotiationManager] Yon kuralini ihlal eden teklif reddedildi (client-side kontrolu atlanmis olabilir): " + playerOfferedPrice + " yon=" + s.direction + " baseOffer=" + s.baseOffer);
+            return;
+        }
 
         bool absurd = playerOfferedPrice <= 0f ||
             (s.direction == OrderDirection.Satis && playerOfferedPrice > s.baseOffer * maxAcceptableMultiplierSell) ||
@@ -221,6 +254,20 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
 
         if (s.direction == OrderDirection.Alim)
         {
+            // BUG DUZELTMESI: bkz. RequestAcceptBaseServerRpc'deki ayni kontrol - burada da
+            // (son teklif kabul akisinda) odeme oncesi bakiye kontrolu SART.
+            if (walletManager != null && walletManager.Balance.Value < s.finalOffer)
+            {
+                Debug.Log("[NegotiationManager] Yetersiz bakiye, Alim iptal edildi. Bakiye=" + walletManager.Balance.Value + " Gereken=" + s.finalOffer);
+                NotifyInsufficientFundsClientRpc();
+                s.stage = NegotiationStage.Resolved;
+                s.resolved = true;
+                s.accepted = false;
+                State.Value = s;
+                ConcludeDealAndReset();
+                return;
+            }
+
             SpawnAlimAnimals(s);
             ProcessPayment(s);
             if (gameStatsTracker != null) gameStatsTracker.ReportPurchaseServer(s.finalOffer);
@@ -521,6 +568,17 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
         if (HUDController.Instance != null)
         {
             HUDController.Instance.ShowWrongDeliveryAlert();
+        }
+    }
+
+    /// <summary>BUG DUZELTMESI (kullanici raporu): yetersiz bakiyeyle Alim yapilmaya
+    /// calisildiginda tum client'lara HUD uyarisini tetikler.</summary>
+    [ClientRpc]
+    private void NotifyInsufficientFundsClientRpc()
+    {
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.ShowAlert("Yetersiz bakiye! Bu alımı yapamazsın.", 4f);
         }
     }
 }

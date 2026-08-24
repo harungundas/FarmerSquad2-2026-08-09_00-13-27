@@ -76,6 +76,12 @@ public class CustomerVehicle : NetworkBehaviour
         if (!isWaitingAtStand) return;
         isWaitingAtStand = false;
         isHeadingToDespawn = true;
+
+        // KULLANICI DUZELTMESI: kuyruktakilerin ilerlemesi bu aracin fiilen haritadan
+        // silinmesini (despawn noktasina ulasmasini) BEKLEMEMELI - standdan ayrilma ANINDA
+        // spawner'a haber verilir, kuyruk hemen bir slot one kayar.
+        spawner.OnVehicleLeavingStandServer(this);
+
         SetTarget(spawner.DespawnPoint);
     }
 
@@ -135,11 +141,21 @@ public class CustomerVehicle : NetworkBehaviour
         if (currentTarget == spawner.StandFrontPoint)
         {
             isWaitingAtStand = true;
+            PlayHornClientRpc(); // Kullanici talebi: standa giris yapan arac TEK BIR KEZ korna calar.
             return;
         }
 
         // Kuyruk slotlarindan birine (StandFront disinda) ulasildi - spawner'in
         // RefreshQueueTargets'i zaten periyodik olarak hedefi guncelleyecek.
+    }
+
+    [ClientRpc]
+    private void PlayHornClientRpc()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.carHornClip);
+        }
     }
 
     private void SetMovingAnim(bool isMoving)

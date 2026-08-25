@@ -230,7 +230,7 @@ private void TryOpenNegotiation()
         }
 
         var order = waitingVehicle.CurrentOrder;
-        negotiationManager.RequestStartNegotiationServerRpc(order.species, order.count, order.direction, order.basePrice);
+        negotiationManager.RequestStartNegotiationServerRpc(order.species, order.count, order.direction, order.basePrice, requestingClientId);
 
         NotifyNegotiationStartedClientRpc(requestingClientId);
     }

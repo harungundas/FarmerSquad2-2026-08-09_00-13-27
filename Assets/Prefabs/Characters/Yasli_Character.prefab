@@ -364,7 +364,7 @@ MonoBehaviour:
   isCarryingHay: 0
   sprintMultiplier: 1.6
   pushSpeedMultiplier: 1
-  jumpUpForce: 8
+  jumpUpForce: 53
   groundCheckDistance: 4.5
   airGravityMultiplier: 7
   walkAnimSpeed: 16
@@ -394,4 +394,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 86137dc145d45e840b4a17f9e1d6c2c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarryController
+  ShowTopMostFoldoutHeaderGroup: 1
   carryRange: 12

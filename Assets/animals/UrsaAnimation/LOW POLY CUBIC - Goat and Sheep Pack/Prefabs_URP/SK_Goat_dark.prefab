@@ -3687,6 +3687,7 @@ GameObject:
   - component: {fileID: 3442562213269345418}
   - component: {fileID: 6590849643965859298}
   - component: {fileID: 8101011453579703759}
+  - component: {fileID: 7079060057792802947}
   m_Layer: 0
   m_Name: SK_Goat_dark
   m_TagString: Untagged
@@ -3771,7 +3772,6 @@ MonoBehaviour:
   ownerPen: {fileID: 0}
   hunger: 100
   countedInStock: 0
-  IsBeingCarried: 0
 --- !u!114 &1323413076785965341
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3879,6 +3879,52 @@ MonoBehaviour:
   maxWaitSeconds: 15
   minMoveSpeed: 0.3
   maxMoveSpeed: 0.5
+--- !u!114 &7079060057792802947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4026167085268298930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.Components.NetworkTransform
+  ShowTopMostFoldoutHeaderGroup: 1
+  NetworkTransformExpanded: 0
+  AutoOwnerAuthorityTickOffset: 1
+  PositionInterpolationType: 0
+  RotationInterpolationType: 0
+  ScaleInterpolationType: 0
+  PositionLerpSmoothing: 1
+  PositionMaxInterpolationTime: 0.1
+  RotationLerpSmoothing: 1
+  RotationMaxInterpolationTime: 0.1
+  ScaleLerpSmoothing: 1
+  ScaleMaxInterpolationTime: 0.1
+  AuthorityMode: 0
+  TickSyncChildren: 0
+  UseUnreliableDeltas: 0
+  SyncPositionX: 1
+  SyncPositionY: 1
+  SyncPositionZ: 1
+  SyncRotAngleX: 1
+  SyncRotAngleY: 1
+  SyncRotAngleZ: 1
+  SyncScaleX: 1
+  SyncScaleY: 1
+  SyncScaleZ: 1
+  PositionThreshold: 0.001
+  RotAngleThreshold: 0.01
+  ScaleThreshold: 0.01
+  UseQuaternionSynchronization: 0
+  UseQuaternionCompression: 0
+  UseHalfFloatPrecision: 0
+  InLocalSpace: 0
+  SwitchTransformSpaceWhenParented: 0
+  Interpolate: 1
+  SlerpPosition: 0
 --- !u!1 &4026167085326133820
 GameObject:
   m_ObjectHideFlags: 0

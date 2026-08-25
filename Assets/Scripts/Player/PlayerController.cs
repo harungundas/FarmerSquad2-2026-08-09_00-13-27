@@ -20,6 +20,15 @@ public class PlayerController : NetworkBehaviour
     [Tooltip("IsOwner tek basina yeterli DEGIL: host modunda, sunucuya ait (henuz kimseye atanmamis) sahne objelerinin OwnerClientId'si de 0'dir - host'un kendi LocalClientId'si de 0 oldugu icin IsOwner yanlislikla true doner. Bu yuzden CharacterSelectionManager, bir govdeyi bir client'a ATADIGI zaman bu bayragi acikca true yapar, biraktiginda false yapar.")]
     public NetworkVariable<bool> IsControllable = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    [Header("Animasyon Senkronu (BUG DUZELTMESI: kullanici bildirdi - diger client'ta hicbir\n    animasyon gorunmuyordu, sanki sadece Idle varmis gibi)")]
+    [Tooltip("Eskiden animator.SetFloat/SetTrigger SADECE IsOwner iken (bu Update() zaten IsOwner\n    gated) cagriliyordu - yani SADECE sahibinin KENDI ekraninda dogru animasyon oynuyordu,\n    diger butun client'lar/host o karakteri hep varsayilan (Idle) Animator durumunda goruyordu\n    (NetworkTransform sadece POZISYONU senkronluyor, Animator parametrelerini DEGIL). Cozum:\n    sahibi bu degerleri NetworkVariable'a yazar (Owner-writable), HERKES (sahibi dahil) bunlari\n    asagidaki LateUpdate'te KENDI Animator'ina uygular.")]
+    private NetworkVariable<float> netAnimSpeed = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    private NetworkVariable<int> netJumpTick = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+    [Header("Dans (kullanici istegi): R tusu, sadece eller bosken (CarryController.IsHandsEmpty)")]
+    private NetworkVariable<bool> netIsDancing = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    private CarryController carryController;
+
     [Header("Feeding (T17 placeholder - tam mantik T18 HayCarryState.cs'de)")]
     public bool isCarryingHay = false;
 
@@ -51,6 +60,7 @@ public class PlayerController : NetworkBehaviour
         animator = GetComponent<Animator>();
         bodyRenderers = GetComponentsInChildren<Renderer>(true);
         bodyColliders = GetComponentsInChildren<Collider>(true);
+        carryController = GetComponent<CarryController>();
     }
 
     public override void OnNetworkSpawn()
@@ -60,11 +70,30 @@ public class PlayerController : NetworkBehaviour
         // kalsin, atandigi an (IsControllable=true) geri gorunur/carpisir hale gelsin.
         ApplyBodyVisibility(IsControllable.Value);
         IsControllable.OnValueChanged += OnControllableChanged;
+        netJumpTick.OnValueChanged += OnJumpTickChanged;
     }
 
     public override void OnNetworkDespawn()
     {
         IsControllable.OnValueChanged -= OnControllableChanged;
+        netJumpTick.OnValueChanged -= OnJumpTickChanged;
+    }
+
+    /// <summary>HERKESTE (sahibi dahil) tetiklenir - JumpTrigger animasyonunu senkron oynatir.</summary>
+    private void OnJumpTickChanged(int previous, int current)
+    {
+        if (animator != null) animator.SetTrigger("JumpTrigger");
+    }
+
+    /// <summary>HERKESTE calisir (IsOwner GATE'i YOK - bu bilincli, Speed parametresi HERKESTE
+    /// ayni sekilde uygulanmali ki uzaktaki gozlemciler de dogru animasyonu gorsun).</summary>
+    private void LateUpdate()
+    {
+        if (animator != null)
+        {
+            animator.SetFloat("Speed", netAnimSpeed.Value);
+            animator.SetBool("IsDancing", netIsDancing.Value);
+        }
     }
 
     private void OnControllableChanged(bool previousValue, bool newValue)
@@ -82,15 +111,18 @@ public class PlayerController : NetworkBehaviour
 
         if (rb != null)
         {
-            // Gorunmezken fizige tabi olmasin (dusmesin/itilmesin), gorunur olunca normal
-            // (yer cekimine tabi, non-kinematic) davranisina doner - Update()'teki linearVelocity
-            // kontrolu bunu zaten non-kinematic bekliyor.
-            rb.isKinematic = !visible;
+            // KULLANICI BUG RAPORU DUZELTMESI (yan urun): eskiden ONCE isKinematic=true
+            // yapiliyor, SONRA linearVelocity/angularVelocity sifirlaniyordu - Unity zaten
+            // kinematik olan bir body'de velocity set edilmesine izin vermiyor, bu yuzden
+            // konsolda "Setting linear/angular velocity of a kinematic body is not supported"
+            // spam'i olusuyordu. Simdi SIRA DUZELTILDI: once velocity sifirlanir, SONRA kinematik
+            // yapilir - hicbir uyari uretmez.
             if (visible == false)
             {
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
+            rb.isKinematic = !visible;
         }
 
         if (animator != null) animator.enabled = visible;
@@ -123,6 +155,23 @@ public class PlayerController : NetworkBehaviour
         bool isMoving = inputDir.sqrMagnitude > 0.0001f;
         float animSpeed = 0f;
         Vector3 moveDir = Vector3.zero;
+
+        // KULLANICI ISTEGI: R tusu ile dans, SADECE eller BOSKEN (CarryController.IsHandsEmpty)
+        // baslatilabilir/durdurulabilir (toggle). Hareket etmeye baslarsa (WASD) dans otomatik
+        // iptal olur - Dance state'i yuruyus/kosu Speed parametresini kullanmiyor, bu yuzden
+        // dans ederken hareket etmek animasyon acisindan anlamsiz kalirdi. Eller sonradan
+        // dolarsa (elindekiyle dans ederken E ile hayvan alinirsa) da guvenlik icin iptal edilir.
+        bool handsEmpty = carryController == null || carryController.IsHandsEmpty;
+
+        if (keyboard.rKey.wasPressedThisFrame && handsEmpty)
+        {
+            netIsDancing.Value = !netIsDancing.Value;
+        }
+
+        if (netIsDancing.Value && (isMoving || !handsEmpty))
+        {
+            netIsDancing.Value = false;
+        }
 
         if (isMoving)
         {
@@ -172,22 +221,17 @@ public class PlayerController : NetworkBehaviour
         if (keyboard.spaceKey.wasPressedThisFrame && IsGrounded())
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpUpForce, rb.linearVelocity.z);
-            if (animator != null) animator.SetTrigger("JumpTrigger");
+            if (animator != null) animator.SetTrigger("JumpTrigger"); // aninda yerel geri bildirim (gecikmesiz)
+            netJumpTick.Value++; // digger client'lara/host'a yay
         }
 
-        if (animator != null)
-        {
-            // BUG DUZELTMESI (kullanici bildirdi: tasirken durunca ~4-5sn animasyon kilitleniyordu):
-            // CarryWalkStop tetiklenince gecilen WalkStop_Carrying state'inin kullandigi klip
-            // (WalkToStopCarring.fbx) Mixamo'nun TAM ham kaydini kullaniyor (147 frame, ~4.9sn),
-            // kirpilmamis. Bu, hasExitTime=0.9 ile carpilinca ~4.4 saniyelik bir "kilitlenme"
-            // hissi yaratiyordu (tuslara basilsa da animasyon degismiyordu). CarryingBlendTree
-            // zaten Speed=0 esiginde ayri bir tasima-idle pozu iceriyor (dogrulandi), bu yuzden
-            // ayri bir "walk stop" gecis state'ine ihtiyac yok - trigger artik ATILMIYOR,
-            // WalkStop_Carrying state'i erisilemez (zararsiz) kaliyor. Klip ileride dogru araliga
-            // kirpilirse (Unity Animation penceresinde gorsel kontrolle), bu blok geri acilabilir.
-            animator.SetFloat("Speed", animSpeed);
-        }
+        // BUG DUZELTMESI (diger client'ta animasyon gorunmuyordu): eskiden burada DOGRUDAN
+        // animator.SetFloat("Speed", animSpeed) cagriliyordu - bu SADECE sahibinin kendi ekraninda
+        // isliyordu (yukaridaki IsOwner erken-return'u yuzunden bu Update() zaten sadece sahipte
+        // calisiyor). Artik degeri NetworkVariable'a yaziyoruz - LateUpdate() (IsOwner gate'i
+        // OLMADAN, herkeste calisir) buradan okuyup KENDI Animator'ina uygular, boylece uzaktaki
+        // gozlemciler de dogru yuruyus/kosma animasyonunu gorur.
+        netAnimSpeed.Value = animSpeed;
     }
 
     /// <summary>

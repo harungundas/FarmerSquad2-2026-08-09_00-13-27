@@ -93,7 +93,17 @@ public class NegotiationManager : NetworkBehaviour
 
     /// <summary>StandInteraction (T26) pazarlik baslatmak icin cagirir.</summary>
     [ServerRpc(RequireOwnership = false)]
-    public void RequestStartNegotiationServerRpc(AnimalSpecies species, int count, OrderDirection direction, float basePrice, ServerRpcParams rpcParams = default)
+    // BUG DUZELTMESI (kullanici bildirdi: "client F'e basinca pazarlik ekrani HOST'ta aciliyordu"):
+    // Bu metod StandInteraction.RequestOpenNegotiationServerRpc icinden DOGRUDAN C# metod
+    // cagrisi olarak cagriliyordu (gercek bir ag RPC'si olarak DEGIL, cunku StandInteraction'in
+    // kendi ServerRpc'si zaten sunucuda calisiyor). Bu durumda 'rpcParams = default' HICBIR ZAMAN
+    // gercek gonderen client'i tasimaz - varsayilan olarak SUNUCUNUN KENDI ID'sine (0/host) esdeger
+    // deger dondurur. Sonuc: negotiatingClientId HER ZAMAN host'un ID'si (0) oluyordu, bu yuzden
+    // NegotiationUI'nin 'isMine' kontrolu SADECE host'ta true donuyordu - panel hep host'ta aciliyordu.
+    // DUZELTME: gercek istekte bulunan client'in ID'sini AYRI, ACIK bir parametre olarak aliyoruz
+    // (StandInteraction zaten bunu playerInRange.OwnerClientId'den dogru biliyor), rpcParams'a
+    // GUVENMIYORUZ.
+    public void RequestStartNegotiationServerRpc(AnimalSpecies species, int count, OrderDirection direction, float basePrice, ulong requestingClientId, ServerRpcParams rpcParams = default)
     {
         if (State.Value.stage != NegotiationStage.Inactive)
         {
@@ -101,7 +111,7 @@ public class NegotiationManager : NetworkBehaviour
             return;
         }
 
-        ulong clientId = rpcParams.Receive.SenderClientId;
+        ulong clientId = requestingClientId;
         State.Value = new NegotiationState
         {
             stage = NegotiationStage.Offered,

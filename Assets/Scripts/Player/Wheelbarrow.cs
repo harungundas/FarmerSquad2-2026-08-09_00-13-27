@@ -187,7 +187,12 @@ private void StartPushing(PlayerController player)
         {
             var animal = hit.GetComponentInParent<AnimalBase>();
             if (animal == null || loadedAnimals.Contains(animal)) continue;
-            if (animal.transform.parent != null && animal.transform.parent != transform) continue; // baskasi (CarryController) tasiyor
+            // BUG DUZELTMESI: CarryController artik transform.SetParent KULLANMIYOR (network
+            // senkron duzeltmesi, bkz. CarryController.cs basi) - bu yuzden transform.parent HER
+            // ZAMAN null olur, "baskasi tasiyor mu" kontrolu asla dogru sonuc vermezdi. Artik
+            // dogrudan (artik network-senkron) IsBeingCarried bayragini kontrol ediyoruz.
+            if (animal.IsBeingCarried) continue; // baskasi (CarryController) tasiyor
+            if (animal.transform.parent != null && animal.transform.parent != transform) continue; // El Arabasindan baska bir seye parent'li
 
             if (CanLoad(animal))
             {

@@ -35,15 +35,24 @@ public class PenManager : NetworkBehaviour
         }
     }
 
-    private void Start()
+    // KULLANICI BUG RAPORU DUZELTMESI (koklu neden): Bu spawn islemi eskiden Start()'ta
+    // yapiliyordu. Tek-sahne proje oldugu icin Start() ana menudeyken, NetworkManager
+    // DINLEMEYE BASLAMADAN COK ONCE calisiyordu - o anda IsListening=false oldugu icin
+    // guard'i GECIYORDU ve SpawnInitialStock() HER MAKINEDE (hem host hem client, ikisi de
+    // henuz baglanmamisken) BAGIMSIZ ve AGA HIC SPAWN EDILMEDEN (netObj.Spawn() cagrilmadan,
+    // cunku o anda 'networked' de false) calisiyordu. Sonuc: host kendi yerel/agsiz kopyalarini
+    // goruyor/kontrol edebiliyordu, client KENDI yerel/agsiz kopyalarini goruyordu - iki taraf
+    // birbirinden tamamen habersiz iki ayri hayvan seti olusuyordu ("bazilari hostta, bazilari
+    // clientta gorunuyor, tasinamiyor" bug raporu tam olarak buydu).
+    //
+    // DUZELTME: spawn artik OnNetworkSpawn()'a tasindi - bu SADECE gercek network-spawn
+    // gerceklestiginde (yani NetworkManager kesin olarak StartHost()/StartClient() ile
+    // baslamis VE bu NetworkObject fiilen aga spawn olmus iken) tetiklenir, hicbir zaman
+    // erken/yaris durumuna dusmez.
+    public override void OnNetworkSpawn()
     {
-        // Host authoritative: sadece server (veya networking hic baslamamissa solo/editor test) stok spawn eder.
-        // AnimalHunger.cs (T14) ile ayni desen - bkz. o dosyadaki not.
-        if (!IsServer && NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
-        {
-            return;
-        }
-
+        base.OnNetworkSpawn();
+        if (!IsServer) return;
         SpawnInitialStock();
     }
 

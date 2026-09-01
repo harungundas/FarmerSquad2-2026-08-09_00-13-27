@@ -53,6 +53,19 @@ public class CarryController : NetworkBehaviour
     // Animator "IsCarrying" bool'u - SADECE sunucu yazar, HERKES (tasiyan dahil) buradan uygular.
     private NetworkVariable<bool> netIsCarryingAnim = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    // BUG DUZELTMESI (kullanici bildirdi: "client hayvan tasirken, kosarken hayvanlar
+    // arkamizda kaliyor"): Pozisyon SADECE sunucuda hesaplanip NetworkTransform (server-
+    // authoritative) ile yayildiginda, tasiyan CLIENT icin her frame ekstra bir ag round-trip'i
+    // + NetworkTransform'un kendi yumusatma/interpolasyon penceresi (varsayilan ~100ms) EKLENIYOR.
+    // Sonuc: taniyan client hizli koserken hayvan gozle gorulur sekilde geriden yetisiyordu.
+    // DUZELTME: Hayvan prefablarinin NetworkTransform'u artik AuthorityMode=OWNER (bkz. prefab
+    // duzenlemesi) - sirtlama aninda hayvanin NetworkObject SAHIPLIGI tasiyan client'a devrediliyor,
+    // boylece o client'in KENDI yerel yazdigi pozisyon dogrudan otoriter kabul ediliyor (sifir ek
+    // gecikme), NetworkTransform bunu sunucuya ve digger client'lara kendisi yayiyor. Client bu
+    // sekilde HANGI hayvan(lar)i tasidigini bilmesi icin sunucunun yazdigi bu referanslari okuyor.
+    private NetworkVariable<NetworkObjectReference> netCarriedSlot0 = new NetworkVariable<NetworkObjectReference>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private NetworkVariable<NetworkObjectReference> netCarriedSlot1 = new NetworkVariable<NetworkObjectReference>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
     // Tasima yerlesimi (kullanici karari):
     private static readonly Vector3 SingleCarryOffset = new Vector3(0.25f, 1.3f, 0.3f);
     private static readonly Vector3[] TwoCarryOffsets = { new Vector3(3.5f, 1.2f, 0.5f), new Vector3(-3.5f, 1.2f, 0.5f) };
@@ -115,6 +128,25 @@ public class CarryController : NetworkBehaviour
                 // (hayvan tasinamamasina) sebep oluyordu. Artik once guvenli kontrol ediliyor.
                 if (nearest.NetworkObject != null && nearest.NetworkObject.IsSpawned)
                 {
+                    // BUG DUZELTMESI (kullanici bildirdi: "client hayvan tasimaya calisirken
+                    // hayvan karakterimizi suruklemeye basliyor" - SADECE client'ta, host'ta degil):
+                    // Gercek collider/kinematik degisikligi SUNUCUDA olur, NetworkVariable ile
+                    // TUM client'lara yayilir - ama bu yayilma en az bir ag round-trip'i suruyor.
+                    // Bu sirada SUNUCU zaten (FixedUpdate, IsServer gated) hayvani oyuncuya dogru
+                    // TASIMAYA baslamis olabilir (NetworkTransform bunu AYRI bir kanaldan, farkli
+                    // zamanlamada yayabilir) - eger pozisyon guncellemesi collider-kapatma
+                    // guncellemesinden ONCE client'a ulasirsa, client'in KENDI fizik motoru bir
+                    // an icin "hayvanin (hala acik) collider'i oyuncuya giriyor" durumunu gorur
+                    // ve oyuncuyu iter/surukler. DUZELTME: tasiyan client, sunucudan onay
+                    // beklemeden KENDI collider'ini/CharacterController'ini HEMEN (iyimser/
+                    // optimistic tahmin) devre disi birakir - boylece kendi ekraninda hicbir
+                    // gecikme penceresi kalmaz. Sunucunun otoriter NetworkVariable'i kisa sure
+                    // sonra zaten ayni sonuca ulasip dogrular (idempotent).
+                    var predictColliders = nearest.GetComponents<Collider>();
+                    foreach (var col in predictColliders) col.enabled = false;
+                    var predictController = nearest.GetComponent<CharacterController>();
+                    if (predictController != null) predictController.enabled = false;
+
                     RequestPickUpServerRpc(new NetworkObjectReference(nearest.NetworkObject));
                 }
                 else
@@ -138,19 +170,24 @@ public class CarryController : NetworkBehaviour
         }
     }
 
-    /// <summary>SUNUCUDA: tasinan her hayvanin pozisyonunu, tasiyan oyuncunun O ANKI transform'una
-    /// gore HER FRAME yeniden hesaplar. SetParent KULLANILMAZ (bkz. sinif basi aciklamasi) - bunun
-    /// yerine NetworkTransform (hayvan prefablarina eklendi) bu sunucu-yazimini otomatik yayar.</summary>
+    /// <summary>ARTIK SUNUCUDA DEGIL, TASIYAN CLIENT'IN KENDI MAKINESINDE (IsOwner) calisir -
+    /// bkz. sinif basi + netCarriedSlot alanlarinin aciklamasi (owner-authoritative NetworkTransform
+    /// ile sifir-gecikmeli yerel takip). Host kendi karakteriyle tasirken IsOwner zaten true olur,
+    /// davranis degismez. Hangi hayvan(lar)i tasidigimizi netCarriedSlot0/1'den (sunucunun yazdigi,
+    /// herkese senkron) cozeriz - carriedAnimals listesi SADECE sunucunun kendi bilgisi/kapasite
+    /// kontrolu icindir, client'ta bos kalir (bkz. yukaridaki tanim).</summary>
     private void FixedUpdate()
     {
-        if (!IsServer) return;
-        if (carriedAnimals.Count == 0) return;
+        if (!playerController.IsOwner) return;
 
         bool canCarryTwoLight = playerController.classData != null && playerController.classData.carryCapacityLight > 1;
+        NetworkVariable<NetworkObjectReference>[] slots = { netCarriedSlot0, netCarriedSlot1 };
 
-        for (int i = 0; i < carriedAnimals.Count; i++)
+        for (int i = 0; i < slots.Length; i++)
         {
-            var animal = carriedAnimals[i];
+            if (i >= netCarriedCount.Value) break;
+            if (!slots[i].Value.TryGet(out NetworkObject animalNo) || animalNo == null) continue;
+            var animal = animalNo.GetComponent<AnimalBase>();
             if (animal == null) continue;
 
             bool isHeavyAnimal = animal.animalData != null && animal.animalData.weightClass == AnimalWeightClass.Heavy;
@@ -273,6 +310,12 @@ public class CarryController : NetworkBehaviour
         var carriedColliders = animal.GetComponents<Collider>();
         foreach (var col in carriedColliders) col.enabled = false;
 
+        // Sahiplik tasiyan client'a devrediliyor - NetworkTransform artik ONUN yerel yazdigi
+        // pozisyonu otoriter kabul edecek (bkz. netCarriedSlot0/1 aciklamasi).
+        animalNo.ChangeOwnership(OwnerClientId);
+        if (slot == 0) netCarriedSlot0.Value = new NetworkObjectReference(animalNo);
+        else netCarriedSlot1.Value = new NetworkObjectReference(animalNo);
+
         netCarriedCount.Value = carriedAnimals.Count;
         netCarryingHeavy.Value = isHeavyAnimal || carryingHeavyAlready;
         netIsCarryingAnim.Value = true;
@@ -317,6 +360,15 @@ public class CarryController : NetworkBehaviour
             foreach (var col in droppedColliders) col.enabled = true;
 
             SnapToGround(animal.transform);
+
+            // KULLANICI BUG RAPORU DUZELTMESI: sirtlarken sahiplik tasiyan client'a devrediliyordu
+            // (NetworkTransform artik AuthorityMode=Owner, bkz. prefab degisikligi) ama birakinca
+            // sahiplik HICBIR ZAMAN sunucuya GERI verilmiyordu - bu da AnimalIdleWander'in (IsServer
+            // gated, ama artik pozisyon yazma yetkisi OWNER'da) o hayvani bir daha asla dogru
+            // sekilde gezdirememesine (yetkisiz yazim) sebep olurdu. Artik birakinca sahiplik
+            // aciKca sunucuya iade ediliyor.
+            var animalNetObj = animal.GetComponent<NetworkObject>();
+            if (animalNetObj != null) animalNetObj.ChangeOwnership(NetworkManager.ServerClientId);
 
             animal.IsBeingCarried = false;
 

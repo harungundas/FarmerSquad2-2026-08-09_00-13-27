@@ -92,20 +92,26 @@ public class AnimalBase : NetworkBehaviour
         ApplyCarriedPhysicsState(current);
     }
 
+    // BUG DUZELTMESI (kullanici bildirdi: "oyun baslayinca inek havada ucmaya basliyor,
+    // sabit olmalıydı"): 'carried=false' dalinda rb.isKinematic = FALSE yapiliyordu - yani
+    // TASINMIYOR olan (dinlenen/normal duran) her hayvan OnNetworkSpawn'da GERCEK fizige
+    // (non-kinematic Rigidbody) birakiliyordu. Bu proje TUM hayvan hareketini SCRIPTED yapiyor
+    // (AnimalIdleWander + CarryController - ARCHITECTURE.md: "NavMesh YOK") - Rigidbody fizigine
+    // hicbir zaman ihtiyac yok/istenmiyor. useGravity zaten kapali oldugu icin yercekimi asagi
+    // cekmiyordu, ama spawn aninda collider'lar (terrain/citler ile) hafifce ic ice giriyorsa
+    // fizik motoru bunu "depenetrate" etmek icin kucuk bir yukari hiz veriyor - useGravity=false
+    // oldugundan bu hiz HICBIR ZAMAN sifirlanmiyor, hayvan yavas yavas/surekli yukari suruklen-
+    // erek "havada ucuyormus" gibi gorunuyordu. DUZELTME: Rigidbody'si olan hayvanlar (Inek/Kec
+    // vb.) HER ZAMAN kinematik kalir - tasiniyor olsun ya da olmasin, gercek fizik simulasyonuna
+    // hic girmezler; pozisyonlari SADECE script (AnimalIdleWander / CarryController) tarafindan
+    // belirlenir.
     private void ApplyCarriedPhysicsState(bool carried)
     {
         if (rb != null)
         {
-            if (carried)
-            {
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
-                rb.isKinematic = true;
-            }
-            else
-            {
-                rb.isKinematic = false;
-            }
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true; // HER ZAMAN true - bkz. yukaridaki aciklama.
         }
 
         var colliders = GetComponents<Collider>();

@@ -466,11 +466,11 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
 
         if (s.direction == OrderDirection.Satis)
         {
-            walletManager.AddBalanceServerRpc(s.finalOffer);
+            walletManager.AddBalanceServerRpc(s.finalOffer, TransactionReason.Satis);
         }
         else
         {
-            walletManager.SubtractBalanceServerRpc(s.finalOffer);
+            walletManager.SubtractBalanceServerRpc(s.finalOffer, TransactionReason.Satis);
         }
     }
 

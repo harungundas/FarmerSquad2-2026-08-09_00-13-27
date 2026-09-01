@@ -83,11 +83,13 @@ public class HUDController : MonoBehaviour
 
     private void OnEnable()
     {
-        if (walletManager != null)
-        {
-            walletManager.Balance.OnValueChanged += OnBalanceChanged;
-        }
-
+        // T75: Balance.OnValueChanged'e bagli anlik (zipla-yazi) guncelleme KALDIRILDI -
+        // artik MoneyFeedbackController, WalletManager.OnTransactionNotified'i dinleyip
+        // SetWalletDisplayValue() uzerinden ~0.4sn'de sayarak guncelliyor. Burada instant
+        // subscription tutulursa MoneyFeedbackController'in animasyonuyla ayni frame'de
+        // yazi icin yaris durumu (race) olusur. Balance her zaman ayni sunucu metodu icinde
+        // NotifyTransactionClientRpc ile birlikte degistigi icin (WalletManager.cs) bu
+        // guncellemeyi kacirmiyoruz - sadece kim yaziyor sorumlulugu degisti.
         if (dayCycleManager != null)
         {
             dayCycleManager.Timer.OnValueChanged += OnTimerChanged;
@@ -98,11 +100,6 @@ public class HUDController : MonoBehaviour
 
     private void OnDisable()
     {
-        if (walletManager != null)
-        {
-            walletManager.Balance.OnValueChanged -= OnBalanceChanged;
-        }
-
         if (dayCycleManager != null)
         {
             dayCycleManager.Timer.OnValueChanged -= OnTimerChanged;
@@ -117,11 +114,6 @@ public class HUDController : MonoBehaviour
         // ilk çizimi yap - ilk gerçek NetworkVariable değişikliği geldiğinde zaten güncellenecek.
         RefreshDayQuota();
         RefreshTimer();
-        RefreshWalletQuota();
-    }
-
-    private void OnBalanceChanged(float previous, float current)
-    {
         RefreshWalletQuota();
     }
 
@@ -184,9 +176,20 @@ private void RefreshTimer()
 
     private void RefreshWalletQuota()
     {
-        if (walletQuotaText == null || walletManager == null) return;
+        if (walletManager == null) return;
+        SetWalletDisplayValue(walletManager.Balance.Value);
+    }
 
-        float balance = walletManager.Balance.Value;
+    /// <summary>
+    /// T75: RefreshWalletQuota'nin ayni formatlama mantigi disari acildi. MoneyFeedbackController
+    /// bunu, WalletManager.Balance.Value yerine kendi animasyonlu ara-deger (displayedValue)
+    /// ile her frame cagirir - boylece kota hedefi ("/ Y$ (Kota)") kismi hep dogru kalirken
+    /// sadece bakiye sayisi sayarak degisir. Bu metot bagimsiz cagrilabilir olmali (balance
+    /// parametresi disaridan verilir), WalletManager'a direkt bakmaz.
+    /// </summary>
+    public void SetWalletDisplayValue(float balance)
+    {
+        if (walletQuotaText == null) return;
 
         if (quotaData != null && dayCycleManager != null)
         {

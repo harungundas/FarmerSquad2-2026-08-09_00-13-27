@@ -60,7 +60,7 @@ public class QuotaManager : NetworkBehaviour
 
         if (currentBalance >= requiredAmount)
         {
-            walletManager.SubtractBalanceServerRpc(requiredAmount);
+            walletManager.SubtractBalanceServerRpc(requiredAmount, TransactionReason.Kira);
             Debug.Log("[QuotaManager] Gun " + day + " kotasi BASARILI. Gerekli: " + requiredAmount +
                 "$, Bakiye (kesinti oncesi): " + currentBalance + "$. Kira kesildi, kalan: " +
                 (currentBalance - requiredAmount) + "$.");

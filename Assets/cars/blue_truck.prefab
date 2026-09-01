@@ -1032,6 +1032,7 @@ GameObject:
   - component: {fileID: 206494742900532000}
   - component: {fileID: 6268768824028535393}
   - component: {fileID: 6368846164890282239}
+  - component: {fileID: 1171191481726449901}
   m_Layer: 0
   m_Name: blue_truck
   m_TagString: Untagged
@@ -1149,6 +1150,27 @@ MonoBehaviour:
   SwitchTransformSpaceWhenParented: 0
   Interpolate: 1
   SlerpPosition: 0
+--- !u!65 &1171191481726449901
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7730009263984135521}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.5, y: 1.34, z: 2.5}
+  m_Center: {x: 0, y: 0.64, z: 0.13}
 --- !u!1 &7884519258877115126
 GameObject:
   m_ObjectHideFlags: 0

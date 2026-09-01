@@ -143,7 +143,7 @@ public class MarketManager : NetworkBehaviour
             return;
         }
 
-        walletManager.SubtractBalanceServerRpc(entry.price);
+        walletManager.SubtractBalanceServerRpc(entry.price, TransactionReason.Harcama);
         PurchasedMask.Value |= bit;
 
         Debug.Log("[MarketManager] Satin alindi: " + entry.displayNameTr + " (" + entry.price + "$).");
@@ -182,5 +182,83 @@ public class MarketManager : NetworkBehaviour
         {
             Debug.LogError("[MarketManager] dayCycleManager atanmamis, sonraki gune gecilemedi.");
         }
+    }
+
+
+
+    // ===== T53: Leveled Upgrades (Satis/Alim Ustaligi) — mevcut PurchasedMask sisteminden TAMAMEN AYRI =====
+    // NOT (kucuk sapma, HANDOFF'a loglanacak): TASKS.md spec'i "NetworkVariable<int>[] (2 eleman)" istiyordu,
+    // ama Unity Netcode'un ILPP tabanli otomatik degisken kaydi sadece DOGRUDAN NetworkVariable<T> alanlarini
+    // tarar - bir array'in ICINDEKI NetworkVariable elemanlarini guvenilir sekilde network-sync ETMEYEBILIR.
+    // Garantili senkron icin iki AYRI adlandirilmis NetworkVariable<int> alani kullanildi; disariya (T54/T55,
+    // UI) upgradeId (0/1) ile erisim GetLeveledUpgradeLevel() uzerinden ayni sekilde sunuluyor - davranissal
+    // fark yok, sadece ic implementasyon NGO-guvenli hale getirildi.
+    public const int SalesMasteryId = 0;
+    public const int BuyMasteryId = 1;
+    private const float LeveledUpgradeBaseCost = 25f;
+    private const float LeveledUpgradeCostMultiplier = 1.4f;
+
+    /// <summary>Satis Ustaligi seviyesi (upgradeId=0). Her seviye T54'te satis fiyatina +%4 ekler.</summary>
+    public NetworkVariable<int> SalesMasteryLevel = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    /// <summary>Alim Ustaligi seviyesi (upgradeId=1). Her seviye T55'te alim fiyatini -%4 dusurur.</summary>
+    public NetworkVariable<int> BuyMasteryLevel = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public int GetLeveledUpgradeLevel(int upgradeId)
+    {
+        if (upgradeId == SalesMasteryId) return SalesMasteryLevel.Value;
+        if (upgradeId == BuyMasteryId) return BuyMasteryLevel.Value;
+        Debug.LogWarning("[MarketManager] Gecersiz leveled upgradeId: " + upgradeId);
+        return 0;
+    }
+
+    /// <summary>cost(n) = 25 * 1.4^(n-1), n = satin alinacak YENI seviye (1-tabanli).</summary>
+    public static float GetLeveledUpgradeCost(int newLevel)
+    {
+        return LeveledUpgradeBaseCost * Mathf.Pow(LeveledUpgradeCostMultiplier, newLevel - 1);
+    }
+
+    /// <summary>
+    /// T53: Jenerik leveled-upgrade satin alma. Mevcut PurchaseUpgradeServerRpc (bitmask, tek
+    /// seferlik) sisteminden TAMAMEN AYRI - o sistemi etkilemez. Tekrar tekrar cagrilabilir,
+    /// her cagrida bir seviye artar, maliyet katlanarak buyur (1.4x).
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    public void PurchaseLeveledUpgradeServerRpc(int upgradeId)
+    {
+        if (!IsServer) return;
+
+        if (upgradeId != SalesMasteryId && upgradeId != BuyMasteryId)
+        {
+            Debug.LogWarning("[MarketManager] PurchaseLeveledUpgradeServerRpc: gecersiz upgradeId " + upgradeId);
+            return;
+        }
+
+        if (walletManager == null)
+        {
+            Debug.LogError("[MarketManager] walletManager atanmamis, leveled upgrade satin alinamadi.");
+            return;
+        }
+
+        int currentLevel = GetLeveledUpgradeLevel(upgradeId);
+        int newLevel = currentLevel + 1;
+        float cost = GetLeveledUpgradeCost(newLevel);
+
+        if (walletManager.Balance.Value < cost)
+        {
+            Debug.Log("[MarketManager] Yetersiz bakiye: leveled upgrade (id=" + upgradeId + ") seviye " +
+                       newLevel + " icin " + cost + "$ gerekli, mevcut bakiye " + walletManager.Balance.Value + "$.");
+            return;
+        }
+
+        walletManager.SubtractBalanceServerRpc(cost, TransactionReason.Harcama);
+
+        if (upgradeId == SalesMasteryId) SalesMasteryLevel.Value = newLevel;
+        else BuyMasteryLevel.Value = newLevel;
+
+        Debug.Log("[MarketManager] Leveled upgrade satin alindi: id=" + upgradeId + " -> seviye " + newLevel +
+                   " (" + cost + "$).");
     }
 }

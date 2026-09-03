@@ -71,6 +71,9 @@ public class VehicleSpawner : NetworkBehaviour
     [Tooltip("Gun 1'de sabit test siparisi kullanildigi icin Ozel Musteri Gun 1'de hic spawn edilmez (Gun 2+ icin gecerli).")]
     public bool disableSpecialCustomerOnDayOne = true;
 
+    [Tooltip("T62: Gunluk kacirilan Ozel Musteri sayaci buraya da raporlanir (bu alandaki MissedSpecialCustomers oyun boyu kumulatif kalir, sifirlanmaz).")]
+    public DailyStatsAccumulator dailyStatsAccumulator;
+
     /// <summary>T58: kacirilan (kabul penceresi dolup kendiliginden ayrilan) Ozel Musteri
     /// sayisi - sadece istatistik amacli, Streak'i (T59) etkilemez, cezasizdir.
     /// DailyStatsAccumulator'a T62'de baglanacak.</summary>
@@ -348,6 +351,7 @@ public override void OnNetworkSpawn()
     {
         MissedSpecialCustomers++;
         Debug.Log("[VehicleSpawner] Ozel Musteri kacirildi (Streak etkilenmedi). Toplam kacirilan: " + MissedSpecialCustomers);
+        if (dailyStatsAccumulator != null) dailyStatsAccumulator.ReportMissedSpecialCustomerServer();
         vehicle.OnSpecialCustomerMissed -= HandleVehicleMissedSpecialWindow;
     }
 

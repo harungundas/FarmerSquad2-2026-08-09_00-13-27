@@ -50,6 +50,10 @@ public class DayCycleManager : NetworkBehaviour
     [Tooltip("WinScreenController.Show()'a gecirilen istatistik kaynagi (Assets/Scripts/Economy/GameStatsTracker.cs).")]
     public GameStatsTracker gameStatsTracker;
 
+    [Header("T62: Gunluk Istatistik Baglantisi")]
+    [Tooltip("Gun basariyla tamamlaninca (iflas/final-kazanma HARIC) ozeti alip sifirlar (Assets/Scripts/Economy/DailyStatsAccumulator.cs).")]
+    public DailyStatsAccumulator dailyStatsAccumulator;
+
 
     [Header("T35: Prestij Baglantisi")]
     [Tooltip("Gun basinda bekleyen bonus arac havuzunu tuketmek icin (ConsumeBonusServer).")]
@@ -374,6 +378,11 @@ public void CompleteDayServer()
         // bilgisayardan onizleme olarak acilmisti (upgrade alma firsati orada verildi),
         // kota gectiyse DOGRUDAN sonraki gune geciliyor.
         Debug.Log("[DayCycleManager] Gun " + dayJustFinished + " basarili (veya o gun kota yok). Sonraki gune geciliyor.");
+
+        // T62: gun kesin olarak ilerleyecek (iflas/final-kazanma DEGIL) - ozet SIFIRLANMADAN
+        // once aliniyor (T63 UI'i henuz yok, simdilik DailyStatsAccumulator kendi icinde log basiyor).
+        if (dailyStatsAccumulator != null) dailyStatsAccumulator.ConsumeAndResetServer(dayJustFinished);
+
         AdvanceToNextDayServer();
     }
 

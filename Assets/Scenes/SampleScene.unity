@@ -803,6 +803,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CharacterSelectionManager
   ShowTopMostFoldoutHeaderGroup: 1
+  TeamFeedDurationMultiplier:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 1
   characterNetworkObjects:
   - {fileID: 1025170064}
   - {fileID: 190801630}
@@ -7535,6 +7540,7 @@ MonoBehaviour:
   loseScreenController: {fileID: 1413920291}
   winScreenController: {fileID: 1240735501}
   gameStatsTracker: {fileID: 404435479}
+  dailyStatsAccumulator: {fileID: 404435480}
   prestigeManager: {fileID: 925950351}
   CurrentDay:
     UpdateTraits:
@@ -9432,6 +9438,7 @@ GameObject:
   - component: {fileID: 404435478}
   - component: {fileID: 404435477}
   - component: {fileID: 404435479}
+  - component: {fileID: 404435480}
   m_Layer: 0
   m_Name: GameStatsTracker
   m_TagString: Untagged
@@ -9519,6 +9526,54 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
   NegotiationsSucceeded:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+--- !u!114 &404435480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 404435476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 758b2345497dc9b409edbe704ab64847, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DailyStatsAccumulator
+  ShowTopMostFoldoutHeaderGroup: 1
+  DailyAnimalsSold:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  DailyProfit:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  DailySuccessfulDeliveries:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  DailyWrongDeliveries:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  DailyNegotiationsAttempted:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  DailyNegotiationsSucceeded:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  DailyMissedSpecialCustomers:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -16187,6 +16242,7 @@ MonoBehaviour:
   specialCustomerChance: 0.08
   specialCustomerPriceMultiplier: 1.5
   disableSpecialCustomerOnDayOne: 1
+  dailyStatsAccumulator: {fileID: 404435480}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -17729,6 +17785,7 @@ MonoBehaviour:
   walletManager: {fileID: 1349025346}
   prestigeManager: {fileID: 925950351}
   gameStatsTracker: {fileID: 404435479}
+  dailyStatsAccumulator: {fileID: 404435480}
   marketManager: {fileID: 1590034658}
   animalDatabase:
   - {fileID: 11400000, guid: 29588f5b1dba0bb4dacecdcc2c692f64, type: 2}
@@ -28949,6 +29006,7 @@ MonoBehaviour:
   timerText: {fileID: 545613850}
   timerFillBar: {fileID: 0}
   walletQuotaText: {fileID: 776314279}
+  difficultyText: {fileID: 0}
   alertText: {fileID: 932337060}
   alertPanel: {fileID: 378458413}
   hudPanels:

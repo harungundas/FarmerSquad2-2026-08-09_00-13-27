@@ -62,6 +62,8 @@ public class NegotiationManager : NetworkBehaviour
     public PrestigeManager prestigeManager;
     [Tooltip("T38: Satis/Alim/pazarlik istatistikleri buraya raporlanir (WinScreenController icin).")]
     public GameStatsTracker gameStatsTracker;
+    [Tooltip("T62: Gunluk satis/alim/pazarlik istatistikleri buraya raporlanir (DailyStatsAccumulator, GameStatsTracker ile PARALEL calisir).")]
+    public DailyStatsAccumulator dailyStatsAccumulator;
     [Tooltip("T54/T55: Satış/Alım Ustalığı seviyelerini okumak için (MarketManager).")]
     public MarketManager marketManager;
 
@@ -173,6 +175,7 @@ public void RequestAcceptBaseServerRpc(ServerRpcParams rpcParams = default)
             SpawnAlimAnimals(s);
             ProcessPayment(s);
             if (gameStatsTracker != null) gameStatsTracker.ReportPurchaseServer(s.finalOffer);
+            if (dailyStatsAccumulator != null) dailyStatsAccumulator.ReportPurchaseServer(s.finalOffer);
             s.stage = NegotiationStage.Resolved;
             s.resolved = true;
             s.deliverySuccess = true;
@@ -248,6 +251,7 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
         // false ise basarili (musteri counter'i kabul etti demek degil, sadece REDDETMEDI -
         // WinScreen'deki "Pazarlik Basarisi" GDD Bolum 10.7'deki anlamiyla budur).
         if (gameStatsTracker != null) gameStatsTracker.ReportNegotiationAttemptServer(!rejected);
+        if (dailyStatsAccumulator != null) dailyStatsAccumulator.ReportNegotiationAttemptServer(!rejected);
 
         if (rejected)
         {
@@ -295,6 +299,7 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
             SpawnAlimAnimals(s);
             ProcessPayment(s);
             if (gameStatsTracker != null) gameStatsTracker.ReportPurchaseServer(s.finalOffer);
+            if (dailyStatsAccumulator != null) dailyStatsAccumulator.ReportPurchaseServer(s.finalOffer);
             s.stage = NegotiationStage.Resolved;
             s.resolved = true;
             s.deliverySuccess = true;
@@ -369,6 +374,7 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
 
             ProcessPayment(s, streakBonus);
             if (gameStatsTracker != null) gameStatsTracker.ReportSaleServer(s.count, s.finalOffer);
+            if (dailyStatsAccumulator != null) dailyStatsAccumulator.ReportSaleServer(s.count, s.finalOffer);
 
             // T27 (eksikti, bu duzeltmede eklendi): basarili SATIS teslimatinda hayvanlar
             // teslimat alanindan gercekten kaldirilmali (yoksa oyuncuda/haritada kalip tekrar
@@ -393,6 +399,7 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
         {
             consecutiveCleanSales = 0; // T59: yanlis/eksik teslimat streak'i sifirlar.
             if (gameStatsTracker != null) gameStatsTracker.ReportWrongDeliveryServer();
+            if (dailyStatsAccumulator != null) dailyStatsAccumulator.ReportWrongDeliveryServer();
             Debug.Log("[NegotiationManager] Yanlis/eksik teslimat! Beklenen " + s.count + "x " + s.species + " - para hareketi yok.");
             NotifyWrongDeliveryClientRpc();
         }

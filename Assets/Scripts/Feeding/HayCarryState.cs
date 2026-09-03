@@ -60,7 +60,15 @@ private void Update()
         {
             holdTimer += Time.deltaTime;
 
-            float feedDuration = playerController.classData != null ? playerController.classData.feedDuration : 4f;
+            float baseFeedDuration = playerController.classData != null ? playerController.classData.feedDuration : 4f;
+            // T61: Takim Cesitliligi Bonusu - CharacterSelectionManager server-authoritative
+            // NetworkVariable'i uzerinden okunur (4+ farkli sinif, hicbiri tekrarsizsa 0.92,
+            // aksi halde 1.0). Kadin'in kendi -%50 bonusunun UZERINE carpimsal biner (kullanici
+            // karari, TASKS.md T61 Context).
+            float teamMultiplier = CharacterSelectionManager.Instance != null
+                ? CharacterSelectionManager.Instance.TeamFeedDurationMultiplier.Value
+                : 1f;
+            float feedDuration = baseFeedDuration * teamMultiplier;
             if (holdTimer >= feedDuration)
             {
                 FeedAnimal(targetAnimal);

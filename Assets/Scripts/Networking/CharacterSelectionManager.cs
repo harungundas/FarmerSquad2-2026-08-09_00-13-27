@@ -31,6 +31,43 @@ public class CharacterSelectionManager : NetworkBehaviour
     public const ulong NoOwner = ulong.MaxValue;
     public const int DefaultCharacterIndex = 0; // Yetiskin
 
+    /// <summary>T61: Takim Cesitliligi Bonusu. Aktif (owner != NoOwner) oyuncular arasinda 4+
+    /// FARKLI karakter sinifi varsa VE hicbir siniftan 2+ oyuncu YOKSA tum takimin yemleme
+    /// suresi -%8 kisalir (carpan 0.92). Aksi halde (cesitlilik yetersiz VEYA herhangi bir
+    /// sinif tekrar ediyor VEYA solo) carpan 1.0 - bonus devre disi. Server-authoritative,
+    /// HayCarryState.cs (T18) bunu classData.feedDuration ile CARPAR (Kadin'in kendi -%50
+    /// bonusunun UZERINE biner - kullanici karari, TASKS.md T61 Context).</summary>
+    public NetworkVariable<float> TeamFeedDurationMultiplier = new NetworkVariable<float>(
+        1.0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    /// <summary>Su anki slot atamalarina gore TeamFeedDurationMultiplier'i yeniden hesaplar.
+    /// Slot sahiplik/karakter degisen HER noktadan (AssignBody, ReleaseBody sonrasi) cagrilmali.</summary>
+    private void RecalculateTeamDiversityBonus()
+    {
+        if (!IsServer) return;
+
+        var activeCharacters = new List<int>();
+        for (int i = 0; i < AssignmentSlotCount; i++)
+        {
+            if (GetSlotOwner(i) != NoOwner) activeCharacters.Add(GetSlotCharacter(i));
+        }
+
+        var distinct = new HashSet<int>(activeCharacters);
+        bool hasDuplicate = distinct.Count != activeCharacters.Count;
+        bool enoughDiversity = distinct.Count >= 4;
+
+        float newMultiplier = (enoughDiversity && !hasDuplicate) ? 0.92f : 1.0f;
+
+        if (!Mathf.Approximately(TeamFeedDurationMultiplier.Value, newMultiplier))
+        {
+            TeamFeedDurationMultiplier.Value = newMultiplier;
+            Debug.Log("[CharacterSelectionManager] Takim Cesitliligi Bonusu guncellendi: carpan x" + newMultiplier +
+                " (aktif oyuncu: " + activeCharacters.Count + ", farkli sinif: " + distinct.Count + ", tekrar var mi: " + hasDuplicate + ").");
+        }
+    }
+
     [Header("5 Karakter Sablonu (sahnedeki orijinal objeler, sira: Yetiskin, Sisman, Cocuk, Kadin, Yasli)")]
     public NetworkObject[] characterNetworkObjects = new NetworkObject[CharacterCount];
 
@@ -50,10 +87,25 @@ public class CharacterSelectionManager : NetworkBehaviour
     public NetworkVariable<int> Slot3Character = new NetworkVariable<int>(DefaultCharacterIndex, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> Slot4Character = new NetworkVariable<int>(DefaultCharacterIndex, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    /// <summary>T61: HayCarryState.cs gibi client-side script'lerin TeamFeedDurationMultiplier'a
+    /// kolayca erisebilmesi icin (QuotaManager.Instance deseniyle ayni). Sahne basina tek
+    /// CharacterSelectionManager varsayilir.</summary>
+    public static CharacterSelectionManager Instance { get; private set; }
+
     // Server-only, network'e gitmez: hangi client'in fiziksel govdesi hangi GameObject.
     private readonly Dictionary<ulong, GameObject> bodyByClient = new Dictionary<ulong, GameObject>();
     // Server-only: karakter sablonu (0..4) su an hangi client'a ait (NoOwner = bos/sunucuda).
     private readonly ulong[] templateOwner = new ulong[CharacterCount];
+
+    private void Awake()
+    {
+        Instance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
 
     public override void OnNetworkSpawn()
     {
@@ -107,6 +159,11 @@ public class CharacterSelectionManager : NetworkBehaviour
             SetSlotOwner(slot, NoOwner);
             SetSlotCharacter(slot, DefaultCharacterIndex);
         }
+
+        // ReleaseBody() ici RecalculateTeamDiversityBonus() zaten cagiriyor, ama o an slot
+        // HALA bu client'a ait gorunuyordu (SetSlotOwner NoOwner henuz yukarida yapilmamisti) -
+        // bu yuzden slot gercekten bosaldiktan SONRA bir kez daha (dogru sonucla) hesapla.
+        RecalculateTeamDiversityBonus();
     }
 
     /// <summary>UI, secim butonuna tiklaninca cagirir. Ayni karakter birden fazla client
@@ -195,6 +252,8 @@ public class CharacterSelectionManager : NetworkBehaviour
         Debug.Log("[CharacterSelectionManager] client" + clientId + " icin govde atandi -> karakter index " + characterIndex + " (" + body.name + ")");
 
         bodyByClient[clientId] = body;
+
+        RecalculateTeamDiversityBonus();
     }
 
     /// <summary>Client'in su anki govdesini birakir: sablonsa sahiplik sunucuya geri verilir,
@@ -227,6 +286,8 @@ public class CharacterSelectionManager : NetworkBehaviour
         }
 
         bodyByClient.Remove(clientId);
+
+        RecalculateTeamDiversityBonus();
     }
 
     private int CountBodiesOfCharacter(int characterIndex)

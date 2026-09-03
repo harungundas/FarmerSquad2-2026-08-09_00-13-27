@@ -73,6 +73,45 @@ public class HUDController : MonoBehaviour
     /// </summary>
     public static HUDController Instance;
 
+    /// <summary>T60 eksik parca tamamlamasi: OnEnable/OnDisable'da cagrilan ama hic yazilmamis
+    /// olan metot/alan - derleme hatasi veriyordu (HayCarryState/CharacterSelectionManager
+    /// degisikliginden BAGIMSIZ, onceki oturumdan kalma). subscribedToQuotaManager: ayni
+    /// event'e cift abone olmayi engeller (surekli poll yerine tek seferlik gec-baglanma).</summary>
+    private bool subscribedToQuotaManager = false;
+
+    private void TrySubscribeToQuotaManager()
+    {
+        if (subscribedToQuotaManager || QuotaManager.Instance == null) return;
+
+        QuotaManager.Instance.DifficultyMultiplier.OnValueChanged += OnDifficultyChanged;
+        subscribedToQuotaManager = true;
+        RefreshDifficultyText(QuotaManager.Instance.DifficultyMultiplier.Value);
+    }
+
+    private void OnDifficultyChanged(float previous, float current)
+    {
+        RefreshDifficultyText(current);
+    }
+
+    private void RefreshDifficultyText(float multiplier)
+    {
+        if (difficultyText == null) return;
+        string label = Mathf.Approximately(multiplier, 0.8f) ? "Kolay"
+            : Mathf.Approximately(multiplier, 1.3f) ? "Zor"
+            : "Normal";
+        difficultyText.text = "Zorluk: " + label + " (x" + multiplier.ToString("0.##") + ")";
+    }
+
+    private void Update()
+    {
+        // T60: QuotaManager.Instance, HUDController'dan SONRA spawn olabilir (sira garantisi
+        // yok) - abone olamadiysak her frame tekrar dene, olduysak hicbir sey yapma (flag).
+        if (!subscribedToQuotaManager)
+        {
+            TrySubscribeToQuotaManager();
+        }
+    }
+
     private void Awake()
     {
         Instance = this;

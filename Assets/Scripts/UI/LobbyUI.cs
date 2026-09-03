@@ -50,6 +50,12 @@ public class LobbyUI : MonoBehaviour
     public Sprite startGameDefaultSprite;
     public Sprite startGameCancelSprite;
 
+    [Header("T60: Zorluk Ayarlari (sadece host degistirebilir, 3 preset)")]
+    public Button[] difficultyButtons = new Button[3];
+    public TextMeshProUGUI[] difficultyButtonTexts = new TextMeshProUGUI[3];
+    public float[] difficultyMultipliers = new float[] { 0.8f, 1.0f, 1.3f };
+    public GameObject difficultyPanelRoot;
+
     [Header("Sol Alt - Leave (RedBtn)")]
     public Button leaveButton;
 
@@ -95,6 +101,7 @@ public class LobbyUI : MonoBehaviour
         if (panelRoot != null) panelRoot.SetActive(false);
         WireButtons();
         WireCharacterPortraits();
+        WireDifficultyButtons();
     }
 
     /// <summary>MainMenuController.OnCreateLobbyClicked/LobbyListUI.OnLobbyRowClicked sonrasi cagirir.</summary>
@@ -113,6 +120,11 @@ public class LobbyUI : MonoBehaviour
         }
 
         if (startGameButton != null) startGameButton.gameObject.SetActive(isLocalPlayerHost);
+
+        // T60: Zorluk preset paneli sadece host'a GORUNUR (client'ta hic gorunmez, sadece
+        // gizleme degil - RPC de zaten host-olmayan bir istek gonderemez cunku buton yok).
+        if (difficultyPanelRoot != null) difficultyPanelRoot.SetActive(isLocalPlayerHost);
+        RefreshDifficultyButtonHighlight();
 
         isReady = false;
         isSelectionLocked = false;
@@ -188,6 +200,11 @@ public class LobbyUI : MonoBehaviour
         int remaining = state.CountdownSecondsRemaining.Value;
         if (countdownText != null) countdownText.text = remaining >= 0 ? remaining.ToString() : "-";
         if (isLocalPlayerHost) SetStartButtonVisual(remaining >= 0);
+
+        // T60: host'un secmis oldugu zorluk carpani her frame yansitilir - QuotaManager
+        // NetworkVariable oldugu icin bu deger client'larda da dogru senkron gelir (butonlar
+        // gorunmese de HUD/QuotaManager degeri tum client'larda aynidir).
+        RefreshDifficultyButtonHighlight();
 
         // KULLANICI BUG RAPORU DUZELTMESI: oyunun GERCEKTEN basladigi an TUM client'lara
         // senkron bir NetworkVariable ile bildirilir - hicbir client kendi kafasina gore
@@ -430,6 +447,60 @@ public class LobbyUI : MonoBehaviour
     {
         if (forceStartModalPanel != null) forceStartModalPanel.SetActive(false);
         Debug.Log("[LobbyUI] Force start iptal edildi (Geri), lobi beklemeye devam.");
+    }
+
+    /// <summary>T60: 3 preset butonu ({Kolay,Normal,Zor} - difficultyMultipliers dizisiyle
+    /// AYNI SIRA) sunucuya SetDifficultyServerRpc gonderecek sekilde bagla. Butonlar sadece
+    /// host icin gorunur (bkz. Show()) - ama yine de gercek guvenlik server-side'da
+    /// (QuotaManager.SetDifficultyServerRpc icindeki IsServer + GameStarted kontrolu).</summary>
+    private void WireDifficultyButtons()
+    {
+        for (int i = 0; i < difficultyButtons.Length; i++)
+        {
+            int capturedIndex = i;
+            if (difficultyButtons[i] != null)
+            {
+                difficultyButtons[i].onClick.AddListener(() => OnDifficultySelected(capturedIndex));
+            }
+        }
+    }
+
+    private void OnDifficultySelected(int presetIndex)
+    {
+        if (!isLocalPlayerHost)
+        {
+            Debug.LogWarning("[LobbyUI] Zorluk sadece host tarafindan degistirilebilir.");
+            return;
+        }
+
+        if (presetIndex < 0 || presetIndex >= difficultyMultipliers.Length) return;
+
+        if (QuotaManager.Instance == null)
+        {
+            Debug.LogWarning("[LobbyUI] QuotaManager.Instance null - zorluk ayari gonderilemedi.");
+            return;
+        }
+
+        float multiplier = difficultyMultipliers[presetIndex];
+        QuotaManager.Instance.SetDifficultyServerRpc(multiplier);
+        Debug.Log("[LobbyUI] Zorluk secildi (host): x" + multiplier);
+    }
+
+    /// <summary>Aktif zorluk carpanina gore hangi preset butonunun "secili" gorundugunu
+    /// gunceller (renk vurgusu). Hem host hem client icin cagrilabilir - QuotaManager.Instance
+    /// NetworkVariable oldugu icin her iki tarafta da senkron okunur, ama butonlarin kendisi
+    /// sadece host'ta interactable/gorunur (Show() icinde ayarlandi).</summary>
+    private void RefreshDifficultyButtonHighlight()
+    {
+        if (QuotaManager.Instance == null || difficultyButtonTexts == null) return;
+
+        float current = QuotaManager.Instance.DifficultyMultiplier.Value;
+        for (int i = 0; i < difficultyButtonTexts.Length; i++)
+        {
+            if (difficultyButtonTexts[i] == null) continue;
+            bool isActive = i < difficultyMultipliers.Length && Mathf.Approximately(difficultyMultipliers[i], current);
+            difficultyButtonTexts[i].color = isActive ? SelectedColor : UnselectedColor;
+        }
     }
 
     /// <summary>KULLANICI BUG RAPORU DUZELTMESI (dolayli): eskiden burada SADECE eski

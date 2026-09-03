@@ -21,12 +21,66 @@ public class QuotaManager : NetworkBehaviour
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server);
 
+    /// <summary>T60: Zorluk Ayarlari. Kolay=0.8, Normal=1.0 (varsayilan), Zor=1.3. Sadece
+    /// host, LobbyUI'daki preset butonlarindan degistirebilir - SetDifficultyServerRpc
+    /// server-side reddeder: (a) sunucu degilse, (b) oyun zaten basladiysa
+    /// (LobbyNetworkState.GameStarted true). Bu deger tum kota hesaplarinda (QuotaManager +
+    /// HUDController) CARPAN olarak kullanilir: requiredAmount * DifficultyMultiplier.Value.</summary>
+    public NetworkVariable<float> DifficultyMultiplier = new NetworkVariable<float>(
+        1.0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    public static QuotaManager Instance { get; private set; }
+
     private void Awake()
     {
+        Instance = this;
+
         if (walletManager == null)
         {
             walletManager = FindObjectOfType<WalletManager>();
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
+    /// <summary>T60: Host-only zorluk secimi. UI gizleme YETMEZ - burada server-side
+    /// dogrulama yapiliyor (FAZ 12 "Host-only Start Game" desenindeki ayni standart):
+    /// (1) sadece sunucu gercekten uygular, (2) lobi kapanip oyun basladiktan sonra
+    /// (LobbyNetworkState.GameStarted == true) degisiklik REDDEDILIR - oyun ortasinda
+    /// zorluk degistirilemez.</summary>
+    [ServerRpc(RequireOwnership = false)]
+    public void SetDifficultyServerRpc(float multiplier, ServerRpcParams rpcParams = default)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        if (LobbyNetworkState.Instance != null && LobbyNetworkState.Instance.GameStarted.Value)
+        {
+            Debug.LogWarning("[QuotaManager] Zorluk degistirme reddedildi - oyun zaten basladi (GameStarted=true).");
+            return;
+        }
+
+        DifficultyMultiplier.Value = multiplier;
+        Debug.Log("[QuotaManager] Zorluk carpani ayarlandi: x" + multiplier + " (clientId=" + rpcParams.Receive.SenderClientId + ")");
+    }
+
+    /// <summary>Verilen gun icin, zorluk carpani UYGULANMIS kota tutarini dondurur. HUDController
+    /// (T60) ve CheckQuotaServerRpc AYNI bu metodu kullanmali - iki ayri hesaplama yolu
+    /// senkronsuzluga (HUD'da 45$, gercek kesintide 36$ gibi) yol acar.</summary>
+    public bool TryGetAdjustedQuota(int day, out float adjustedAmount)
+    {
+        adjustedAmount = 0f;
+        if (quotaData == null) return false;
+        if (!quotaData.TryGetQuota(day, out float baseAmount)) return false;
+        adjustedAmount = baseAmount * DifficultyMultiplier.Value;
+        return true;
     }
 
     /// <summary>T38: DayCycleManager'in Gun 18 (final kota) sonrasi WinScreenController.Show()
@@ -50,7 +104,7 @@ public class QuotaManager : NetworkBehaviour
             return;
         }
 
-        if (!quotaData.TryGetQuota(day, out float requiredAmount))
+        if (!TryGetAdjustedQuota(day, out float requiredAmount))
         {
             Debug.LogWarning("[QuotaManager] Gun " + day + " icin tanimli kota yok, kontrol atlandi.");
             return;

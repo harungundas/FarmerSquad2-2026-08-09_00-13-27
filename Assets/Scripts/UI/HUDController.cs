@@ -45,6 +45,9 @@ public class HUDController : MonoBehaviour
     [Header("Sağ Üst - Kasa / Kota Hedefi")]
     public TextMeshProUGUI walletQuotaText;
 
+    [Header("Zorluk Göstergesi (T60 ek: host+client her ikisinde de görünür, QuotaManager.DifficultyMultiplier NetworkVariable'ından okunur)")]
+    public TextMeshProUGUI difficultyText;
+
     [Header("Dinamik Uyarılar (T37)")]
     [Tooltip("Geçici mesajlar için (\"Araç geldi!\", \"Yanlış hayvan teslimat alanına konuldu!\" gibi). Başlangıçta kapalı olmalı.")]
     public TextMeshProUGUI alertText;
@@ -96,6 +99,12 @@ public class HUDController : MonoBehaviour
             dayCycleManager.CurrentDay.OnValueChanged += OnDayChanged;
             dayCycleManager.IsFreeMode.OnValueChanged += OnFreeModeChanged;
         }
+
+        // T60 ek: Zorluk gostergesi. QuotaManager.Instance sahne yuklenirken HUDController'dan
+        // once ya da sonra Awake calisabilir (sira garantisi yok) - bu yuzden hem burada abone
+        // olmayi DENE hem de Update() icinde tek seferlik gec-baglanma kontrolu yapilir
+        // (subscribedToQuotaManager flag'i ile, surekli poll etmemek icin).
+        TrySubscribeToQuotaManager();
     }
 
     private void OnDisable()
@@ -105,6 +114,12 @@ public class HUDController : MonoBehaviour
             dayCycleManager.Timer.OnValueChanged -= OnTimerChanged;
             dayCycleManager.CurrentDay.OnValueChanged -= OnDayChanged;
             dayCycleManager.IsFreeMode.OnValueChanged -= OnFreeModeChanged;
+        }
+
+        if (subscribedToQuotaManager && QuotaManager.Instance != null)
+        {
+            QuotaManager.Instance.DifficultyMultiplier.OnValueChanged -= OnDifficultyChanged;
+            subscribedToQuotaManager = false;
         }
     }
 
@@ -194,7 +209,23 @@ private void RefreshTimer()
         if (quotaData != null && dayCycleManager != null)
         {
             int nextQuotaDay = GetNextQuotaDay(dayCycleManager.CurrentDay.Value);
-            if (quotaData.TryGetQuota(nextQuotaDay, out float requiredAmount))
+
+            // T60: Zorluk carpani QuotaManager'da tutuluyor (host-authoritative NetworkVariable).
+            // HUD, QuotaManager.Instance varsa carpan-uygulanmis degeri gosterir; QuotaManager
+            // henuz spawn olmadiysa (ör. cok erken bir frame) ham (carpansiz) degere duser -
+            // bu sadece gecici bir fallback, gercek kesinti her zaman QuotaManager'dan gelir.
+            bool gotAmount = false;
+            float requiredAmount = 0f;
+            if (QuotaManager.Instance != null)
+            {
+                gotAmount = QuotaManager.Instance.TryGetAdjustedQuota(nextQuotaDay, out requiredAmount);
+            }
+            else
+            {
+                gotAmount = quotaData.TryGetQuota(nextQuotaDay, out requiredAmount);
+            }
+
+            if (gotAmount)
             {
                 walletQuotaText.text = "Kasada: " + balance.ToString("0.##") + "$ / " + requiredAmount.ToString("0.##") + "$ (Kota)";
                 return;

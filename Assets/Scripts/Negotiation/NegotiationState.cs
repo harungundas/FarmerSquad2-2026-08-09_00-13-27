@@ -62,6 +62,12 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
 
     public bool deliverySuccess;
 
+    // T59: Ardisik Teslimat Bonusu (Streak) sadece PAZARLIKSIZ (RequestAcceptBaseServerRpc)
+    // akisla kapanan satislara uygulanir. RequestNegotiateServerRpc risk atisini kazanip
+    // FinalOffered'a gecince bu alan true olarak isaretlenir; RequestFinalizeDeliveryServerRpc
+    // bu alani okuyarak streak sayacini artirip artirmayacagina karar verir.
+    public bool wasNegotiated;
+
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
         serializer.SerializeValue(ref stage);
@@ -76,6 +82,7 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
         serializer.SerializeValue(ref accepted);
         serializer.SerializeValue(ref rejectRiskPercent);
         serializer.SerializeValue(ref deliverySuccess);
+        serializer.SerializeValue(ref wasNegotiated);
     }
 
     public bool Equals(NegotiationState other)
@@ -91,7 +98,8 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
             && resolved == other.resolved
             && accepted == other.accepted
             && rejectRiskPercent.Equals(other.rejectRiskPercent)
-            && deliverySuccess == other.deliverySuccess;
+            && deliverySuccess == other.deliverySuccess
+            && wasNegotiated == other.wasNegotiated;
     }
 
     public override bool Equals(object obj) => obj is NegotiationState other && Equals(other);
@@ -113,7 +121,8 @@ public struct NegotiationState : INetworkSerializable, System.IEquatable<Negotia
             resolved = false,
             accepted = false,
             rejectRiskPercent = 0f,
-            deliverySuccess = false
+            deliverySuccess = false,
+            wasNegotiated = false
         };
     }
 }

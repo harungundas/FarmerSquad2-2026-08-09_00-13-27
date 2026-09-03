@@ -40,6 +40,15 @@ public class NegotiationManager : NetworkBehaviour
     [Tooltip("Alimda oyuncunun teklif edebilecegi alt sinir: baseOffer * bu deger.")]
     public float minAcceptableMultiplierBuy = 0.5f;
 
+    [Header("T59: Ardisik Teslimat Bonusu (Streak)")]
+    [Tooltip("Her 3 ardisik hatasiz, PAZARLIKSIZ satista +%5 kumulatif, tavan +%15 (3/6/9. islemde +5/+10/+15).")]
+    public int streakStepSize = 3;
+    public float streakBonusPerStep = 0.05f;
+    public float streakBonusCap = 0.15f;
+
+    // Server-only sayac - network'e gerek yok, sadece fiyat hesabinda kullanilir.
+    private int consecutiveCleanSales = 0;
+
     [Header("Baglantilar")]
     [Tooltip("StandFront'ta bekleyen araci bulup ResolveOrder() cagirmak icin.")]
     public VehicleSpawner vehicleSpawner;
@@ -242,6 +251,7 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
 
         if (rejected)
         {
+            consecutiveCleanSales = 0; // T59: pazarlik reddi de streak'i kirar.
             s.stage = NegotiationStage.Resolved;
             s.resolved = true;
             s.accepted = false;
@@ -252,6 +262,7 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
 
         s.playerCounter = playerOfferedPrice;
         s.finalOffer = playerOfferedPrice;
+        s.wasNegotiated = true;
         s.stage = NegotiationStage.FinalOffered;
         State.Value = s;
     }
@@ -302,6 +313,7 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
     {
         if (!IsValidCaller(rpcParams, NegotiationStage.FinalOffered)) return;
 
+        consecutiveCleanSales = 0; // T59: pazarliktan vazgecme de streak'i kirar.
         var s = State.Value;
         s.stage = NegotiationStage.Resolved;
         s.resolved = true;
@@ -345,7 +357,17 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
 
         if (success)
         {
-            ProcessPayment(s);
+            // T59: sadece PAZARLIKSIZ satislar streak sayacina dahil edilir/onu ilerletir.
+            // Pazarlikli satislar sayaca dokunmaz (ne artirir ne sifirlar).
+            float streakBonus = 0f;
+            if (!s.wasNegotiated)
+            {
+                consecutiveCleanSales++;
+                int steps = consecutiveCleanSales / streakStepSize;
+                streakBonus = Mathf.Min(steps * streakBonusPerStep, streakBonusCap);
+            }
+
+            ProcessPayment(s, streakBonus);
             if (gameStatsTracker != null) gameStatsTracker.ReportSaleServer(s.count, s.finalOffer);
 
             // T27 (eksikti, bu duzeltmede eklendi): basarili SATIS teslimatinda hayvanlar
@@ -369,6 +391,7 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
         }
         else
         {
+            consecutiveCleanSales = 0; // T59: yanlis/eksik teslimat streak'i sifirlar.
             if (gameStatsTracker != null) gameStatsTracker.ReportWrongDeliveryServer();
             Debug.Log("[NegotiationManager] Yanlis/eksik teslimat! Beklenen " + s.count + "x " + s.species + " - para hareketi yok.");
             NotifyWrongDeliveryClientRpc();
@@ -459,7 +482,11 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
     /// para GELIR (AddBalance). Alim (ciftlik satin aliyor) -> para GIDER (SubtractBalance).
     /// walletManager atanmamissa sadece uyari basar, State/arac akisini BLOKE ETMEZ.
     /// </summary>
-    private void ProcessPayment(NegotiationState s)
+    /// <summary>T59: streakBonus, sadece Satis yonunde ve sadece pazarliksiz (RequestFinalizeDeliveryServerRpc
+    /// tarafindan hesaplanan) akiste sifirdan farkli gelir; Alim yolundaki cagrilarda her zaman 0f'tir.
+    /// Satis Ustaligi (ApplyMasteryAdjustment, baseOffer'a ONCEDEN uygulandi) ile ayni taban uzerine
+    /// additive olarak eklenir: finalOffer * (1 + streakBonus).</summary>
+    private void ProcessPayment(NegotiationState s, float streakBonus = 0f)
     {
         if (walletManager == null)
         {
@@ -469,7 +496,8 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
 
         if (s.direction == OrderDirection.Satis)
         {
-            walletManager.AddBalanceServerRpc(s.finalOffer, TransactionReason.Satis);
+            float amount = s.finalOffer * (1f + streakBonus);
+            walletManager.AddBalanceServerRpc(amount, TransactionReason.Satis);
         }
         else
         {

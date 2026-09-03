@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AnimalData
   species: 2
   weightClass: 0
-  buyPrice: 12
-  sellPrice: 25
+  buyPrice: 10
+  sellPrice: 20
   prefabRef: {fileID: 4026167085268298930, guid: 3edcf70af3303894482eb673a57b1198, type: 3}

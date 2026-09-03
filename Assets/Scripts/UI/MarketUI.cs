@@ -123,19 +123,27 @@ private void Awake()
 
         int mask = marketManager.PurchasedMask.Value;
         var catalog = marketManager.UpgradeCatalog;
+        int dayForRotation = marketManager.DayJustCompleted.Value;
 
         for (int i = 0; i < upgradeButtons.Length; i++)
         {
             if (!catalog.TryGetUpgrade(i, out var entry)) continue;
             bool purchased = (mask & (1 << i)) != 0;
+            // T56: Pazar Rotasyonu - bu kota doneminde kilitli mi (satin alinmis olsa bile
+            // kilitliyse tekrar gosterge amacli griye alinir, ama zaten satin alinmis olan
+            // bir upgrade'in "Alindi" durumu oncelikli gosterilir).
+            bool locked = !purchased && MarketManager.IsUpgradeLocked(i, dayForRotation);
 
             if (upgradeButtons[i].label != null)
             {
-                string status = purchased ? " (Alındı)" : (" - " + entry.price.ToString("0.##") + "$");
+                string status;
+                if (purchased) status = " (Alındı)";
+                else if (locked) status = " (Kilitli)";
+                else status = " - " + entry.price.ToString("0.##") + "$";
                 upgradeButtons[i].label.text = entry.displayNameTr + status;
             }
             if (upgradeButtons[i].button != null)
-                upgradeButtons[i].button.interactable = !purchased;
+                upgradeButtons[i].button.interactable = !purchased && !locked;
         }
     }
 

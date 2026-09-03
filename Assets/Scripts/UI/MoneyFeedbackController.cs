@@ -44,7 +44,8 @@ public class MoneyFeedbackController : MonoBehaviour
 
     private const int FloatingPoolSize = 5;
     private const float FloatingDuration = 0.8f;
-    private const float FloatingDistance = 50f; // yukari kayma mesafesi (px, anchoredPosition)
+    private const float FloatingDistance = 24f; // BUGFIX (3. canli test, kullanici bulgusu 02.09.2026): eskiden 40f idi, yazi Kasa metninden gereginden fazla uzaklasiyordu ("sag altta kalmis" hissi) - kisaltildi, artik Kasa metnine daha yakin kalip soluyor.
+    private const float FloatingFontSizeMultiplier = 1.4f; // BUGFIX (3. canli test, kullanici bulgusu 02.09.2026): kullanici yaziyi kucuk buldu, Kasa metninden %40 buyuk yapildi.
 
     private bool initialized = false;
     private float displayedValue = 0f;
@@ -198,15 +199,22 @@ public class MoneyFeedbackController : MonoBehaviour
             go.transform.SetParent(parent, false);
 
             RectTransform rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.5f, 1f);
-            rt.anchorMax = new Vector2(0.5f, 1f);
-            rt.pivot = new Vector2(0.5f, 0f);
-            rt.sizeDelta = new Vector2(160f, 30f);
-            rt.anchoredPosition = new Vector2(0f, 4f);
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(180f, 40f); // BUGFIX (3. canli test 02.09.2026): buyutulen font (FloatingFontSizeMultiplier) kirpilmasin diye kutu buyutuldu.
+            // BUGFIX (2-client canli test, T76 - 1. bulgu): eskiden panelin USTUNE (anchor top, +4)
+            // spawn oluyordu - ekran disina tasiyip hicbir cozunurlukte gorunmuyordu. Panelin ALT
+            // kenarindan spawn olup yukari suzulecek sekilde degistirildi.
+            // BUGFIX (2-client canli test - 2. bulgu, kullanici tarafindan bulundu): -4f/50f ile bile
+            // panelin/ekranin ust kenarina cok yakin gidip bazi cozunurluklerde yarim tasiyordu.
+            // Baslangic pozisyonu daha asagi (-24f) alindi, FloatingDistance 40f'a dusuruldu -
+            // hem panel sinirlari icinde hem ekran ust kenarindan guvenli mesafede kaliyor.
+            rt.anchoredPosition = new Vector2(0f, -8f); // BUGFIX (3. canli test, kullanici bulgusu 02.09.2026): eskiden -24f idi, Kasa metninden gereginden uzak basliyordu - Kasa metninin hemen altina yaklastirildi.
 
             TextMeshProUGUI text = go.AddComponent<TextMeshProUGUI>();
             text.font = hud.walletQuotaText.font;
-            text.fontSize = hud.walletQuotaText.fontSize;
+            text.fontSize = hud.walletQuotaText.fontSize * FloatingFontSizeMultiplier; // BUGFIX (3. canli test, kullanici bulgusu 02.09.2026): Kasa metninden %40 buyuk.
             text.fontStyle = FontStyles.Bold;
             text.alignment = TextAlignmentOptions.Center;
             text.raycastTarget = false;
@@ -268,8 +276,12 @@ public class MoneyFeedbackController : MonoBehaviour
             slot.elapsed += dt;
             float t = Mathf.Clamp01(slot.elapsed / FloatingDuration);
 
+            // BUGFIX (3. bulgu, kullanici tarafindan bulundu): eskiden YUKARI (+=) kayiyordu,
+            // bu da HUD panelinin USTUNE/icine giriyordu - hem dikkat cekmiyordu hem ekran ust
+            // kenarindan tasma riski vardi. Artik ASAGI (-=) kayiyor - panelin altinda kalip
+            // HUD'dan uzaklasiyor, hem daha dikkat cekici hem tasma riski yok.
             Vector2 pos = slot.startAnchoredPos;
-            pos.y += FloatingDistance * t;
+            pos.y -= FloatingDistance * t;
             slot.rt.anchoredPosition = pos;
             slot.canvasGroup.alpha = 1f - t;
 

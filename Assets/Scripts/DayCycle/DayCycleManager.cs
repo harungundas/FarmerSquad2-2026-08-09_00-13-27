@@ -15,6 +15,7 @@ using Unity.Netcode;
 /// Gerçek gün geçişi / QuotaManager bağlantısı T32'de kurulacak (bu task'ta YOK, kasıtlı).
 /// </summary>
 [RequireComponent(typeof(NetworkObject))]
+[RequireComponent(typeof(AudioSource))]
 public class DayCycleManager : NetworkBehaviour
 {
 
@@ -28,6 +29,12 @@ public class DayCycleManager : NetworkBehaviour
     [Header("Bagli Sistemler")]
     [Tooltip("240sn dolunca StopAcceptingCustomers() cagrilir.")]
     public VehicleSpawner vehicleSpawner;
+
+    [Header("T65: Horoz Sesi (Gun Basi)")]
+    [Tooltip("Gun basinda calinacak horoz sesi. T64 (Kararma/Kart/Aydinlanma zinciri) eklendiginde bu tetikleme Aydinlanma adimina tasinmali - simdilik StartDayServer'da (gun basi) calisiyor, bkz. HANDOFF deviation notu.")]
+    public AudioClip roosterCrowClip;
+
+    private AudioSource _audioSource;
 
     [Header("T32: Gun Tamamlama Baglantilari")]
     [Tooltip("Gun tamamlaninca kota kontrolu icin cagrilir (T30).")]
@@ -176,11 +183,51 @@ private void StartDayServer(int day)
             vehicleSpawner.BeginDayServer(GetTotalVehicleCountForToday(), customerWindowSeconds, day);
         }
 
+        // T65: Horoz sesi - gun basinda tum client'lara reliable ClientRpc ile bildirilir
+        // (host dahil, NGO ClientRpc'yi host'ta da local olarak calistirir). T64 eklenince
+        // bu cagri Aydinlanma adimina tasinmali (bkz. Header tooltip).
+        //
+        // GECICI YAMA (02.09.2026, 2-client canli test bulgusu): StartDayServer, gun sonu
+        // CompleteDayServer -> AdvanceToNextDayServer zincirinden hemen sonra, ayni frame'de
+        // cagriliyor. Bu yuzden rent_deduction sesi (QuotaManager kira kesintisi) ile horoz
+        // sesi neredeyse ayni anda calinip ust uste binip anlasilmaz oluyordu. Kalici cozum
+        // T64'te (horozu gercekten "Aydinlanma" adimina tasimak) yapilacak - burada sadece
+        // kucuk bir gecikme ile iki sesin zaman olarak ayrilmasi saglaniyor.
+        StartCoroutine(PlayRoosterCrowDelayed(RoosterCrowDelaySeconds));
+
         Debug.Log("[DayCycleManager] Gun " + day + " basladi. Pencere: " + customerWindowSeconds +
                    "sn. Bugunku taban arac sayisi: " + GetVehicleCountForDay(day) +
                    " + Prestij bonusu " + BonusVehiclesToday.Value +
                    " = toplam " + GetTotalVehicleCountForToday());
     }
+
+// GECICI YAMA (02.09.2026): rent_deduction ile ayni frame'de calmasini onlemek icin
+    // kucuk bir gecikme. Kalici cozum T64'te (Aydinlanma adimina tasima).
+    private const float RoosterCrowDelaySeconds = 1.0f;
+
+    private System.Collections.IEnumerator PlayRoosterCrowDelayed(float delaySeconds)
+    {
+        yield return new WaitForSeconds(delaySeconds);
+        PlayRoosterCrowClientRpc();
+    }
+
+    [ClientRpc]
+    private void PlayRoosterCrowClientRpc()
+    {
+        if (roosterCrowClip == null)
+        {
+            Debug.LogWarning("[DayCycleManager] roosterCrowClip atanmamis, horoz sesi calinamadi.");
+            return;
+        }
+
+        if (_audioSource == null)
+        {
+            _audioSource = GetComponent<AudioSource>();
+        }
+
+        _audioSource.PlayOneShot(roosterCrowClip);
+    }
+
 
     private void EnterFreeModeServer()
     {

@@ -333,12 +333,23 @@ private void RefreshTimer()
     /// oyuncu aracin SATMAK mi yoksa SATIN ALMAK mi istedigini anlayamiyordu. Artik yon ACIKCA
     /// yazilir: Satis = musteri bizden hayvan ALMAK istiyor (biz satiyoruz), Alim = musteri bize
     /// hayvan SATMAK istiyor (biz satin aliyoruz).</summary>
-    public void ShowVehicleArrivedAlert(AnimalSpecies species, int count, OrderDirection direction)
+    public void ShowVehicleArrivedAlert(AnimalSpecies species, int count, OrderDirection direction, bool isSpecial = false)
     {
         string msg = direction == OrderDirection.Satis
             ? "Araç geldi! Müşteri " + count + "x " + TurkishSpeciesName(species) + " SATIN ALMAK istiyor (SATIŞ)"
             : "Araç geldi! Müşteri " + count + "x " + TurkishSpeciesName(species) + " SATMAK istiyor (ALIM)";
-        ShowAlert(msg, 4f);
+
+        // T58 - Ozel Musteri: farkli/belirgin isaret (sari vurgu emoji + on ek metin),
+        // ayri bir UI paneli icat etmeden mevcut uyari sistemi uzerinden.
+        if (isSpecial)
+        {
+            msg = "⭐ ÖZEL MÜŞTERİ! ⭐ " + msg + " (Normalden %50 FAZLA ödüyor, kaçırma!)";
+            ShowAlert(msg, 6f);
+        }
+        else
+        {
+            ShowAlert(msg, 4f);
+        }
     }
 
     /// <summary>T37: NegotiationManager'in ClientRpc'si bunu cagirir (yanlis/eksik teslimat).</summary>

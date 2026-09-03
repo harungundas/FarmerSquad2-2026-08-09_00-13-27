@@ -62,6 +62,20 @@ public class VehicleSpawner : NetworkBehaviour
     [Tooltip("Bos slot doldururken art arda spawn edilen araclar arasinda beklenecek belirgin sure (saniye). Gunun ilk aracinda bu bekleme YOK, sadece 2. ve sonraki araclar arasinda uygulanir.")]
     public float spawnStaggerDelaySeconds = 2.5f;
 
+    [Header("T58 - Ozel Musteri")]
+    [Tooltip("Her spawn'da bir aracin Ozel Musteri olma ihtimali (0-1 arasi). Spec: ~%8.")]
+    [Range(0f, 1f)]
+    public float specialCustomerChance = 0.08f;
+    [Tooltip("Ozel Musteri normalden ne kadar fazla oder (carpan). Spec: %50 fazla.")]
+    public float specialCustomerPriceMultiplier = 1.5f;
+    [Tooltip("Gun 1'de sabit test siparisi kullanildigi icin Ozel Musteri Gun 1'de hic spawn edilmez (Gun 2+ icin gecerli).")]
+    public bool disableSpecialCustomerOnDayOne = true;
+
+    /// <summary>T58: kacirilan (kabul penceresi dolup kendiliginden ayrilan) Ozel Musteri
+    /// sayisi - sadece istatistik amacli, Streak'i (T59) etkilemez, cezasizdir.
+    /// DailyStatsAccumulator'a T62'de baglanacak.</summary>
+    public int MissedSpecialCustomers { get; private set; } = 0;
+
     /// <summary>DayCycleManager (T31) 240sn dolunca bunu cagirir.</summary>
 public void StopAcceptingCustomers()
     {
@@ -130,7 +144,87 @@ public override void OnNetworkSpawn()
 
         Debug.Log("[VehicleSpawner] Gun " + currentDay + " basladi, bugun toplam " + vehiclesRemainingToday + " arac. Musait slotlar aninda dolduruluyor, kalanlar slot bosaldikca gelecek.");
 
+        // T57 - Gunun Talebi: her gun basi tur agirliklarini yeniden hesapla (+-%15 sapma,
+        // esit dagilim = 1.0 taban). GenerateRandomOrder() bu tabloyu okuyacak.
+        RollDailyDemandWeights();
+
         FillAvailableSlotsServer();
+    }
+
+    // ---- T57 - Gunun Talebi ----
+    // Esit dagilimdan (her tur agirlik=1.0) en fazla +-%15 sapan gunluk bir agirlik tablosu.
+    // allAnimalData'daki her tur icin ayri bir agirlik tutulur (index allAnimalData ile eslesir).
+    // Kapsam sinirlanmis: sadece VehicleSpawner.GenerateRandomOrder()'daki tur secimini etkiler,
+    // adet/yon secimine dokunmaz (ARCHITECTURE.md "## Araç & Sipariş Sistemi" - bu gorev sadece
+    // tur agirligi icin var).
+    private float[] dailyDemandWeights;
+
+    private void RollDailyDemandWeights()
+    {
+        if (allAnimalData == null || allAnimalData.Length == 0)
+        {
+            dailyDemandWeights = null;
+            return;
+        }
+
+        dailyDemandWeights = new float[allAnimalData.Length];
+        int bestIndex = 0;
+        float bestWeight = float.MinValue;
+
+        for (int i = 0; i < allAnimalData.Length; i++)
+        {
+            // [0.85, 1.15] araliginda rastgele sapma - esit dagilimdan +-%15.
+            float weight = Random.Range(0.85f, 1.15f);
+            dailyDemandWeights[i] = weight;
+
+            if (weight > bestWeight)
+            {
+                bestWeight = weight;
+                bestIndex = i;
+            }
+        }
+
+        AnimalSpecies highlightedSpecies = allAnimalData[bestIndex].species;
+
+        // Test/dogrulama icin: gunun tum tur agirliklarini konsola logla.
+        var sb = new System.Text.StringBuilder();
+        sb.Append("[VehicleSpawner] Gun ").Append(currentDayForSpawning).Append(" - Gunun Talebi agirliklari: ");
+        for (int i = 0; i < allAnimalData.Length; i++)
+        {
+            sb.Append(allAnimalData[i].species).Append("=").Append(dailyDemandWeights[i].ToString("0.00"));
+            if (i < allAnimalData.Length - 1) sb.Append(", ");
+        }
+        sb.Append(" | One cikan: ").Append(highlightedSpecies);
+        Debug.Log(sb.ToString());
+
+        NotifyDailyDemandClientRpc(highlightedSpecies);
+    }
+
+    /// <summary>T57: gun basinda HUD'da "Bugun X talebi yuksek" banner'ini gosterir.
+    /// Mevcut dinamik uyari sistemi (HUDController.ShowAlert) kullanilir, yeni bir UI paneli
+    /// icat edilmez (Context gereksinimi).</summary>
+    [ClientRpc]
+    private void NotifyDailyDemandClientRpc(AnimalSpecies highlightedSpecies)
+    {
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.ShowAlert("Bugün " + TurkishSpeciesNameLocal(highlightedSpecies) + " talebi yüksek", 5f);
+        }
+    }
+
+    /// <summary>HUDController.TurkishSpeciesName private oldugu icin (T37, HUD katmani disina
+    /// sizdirilmamis) burada kucuk bir kopyasi tutulur - proje genelinde tek baska yer yok.</summary>
+    private string TurkishSpeciesNameLocal(AnimalSpecies species)
+    {
+        switch (species)
+        {
+            case AnimalSpecies.Chicken: return "Tavuk";
+            case AnimalSpecies.Sheep: return "Koyun";
+            case AnimalSpecies.Goat: return "Keçi";
+            case AnimalSpecies.Cow: return "İnek";
+            case AnimalSpecies.Horse: return "At";
+            default: return species.ToString();
+        }
     }
 
     /// <summary>Kuyrukta (StandFront + 3 Queue = 4 slot) bos yer var VE bugun icin hala arac
@@ -222,13 +316,39 @@ public override void OnNetworkSpawn()
         var testOrder = (currentDayForSpawning <= 1)
             ? new OrderData(AnimalSpecies.Chicken, testOrderCount, testOrderDirection, testAnimalData)
             : GenerateRandomOrder();
+
+        // T58 - Ozel Musteri: Gun 1'de (sabit test siparisi) hic tetiklenmez (disableSpecialCustomerOnDayOne).
+        // Gun 2+'da ~%8 ihtimalle bu arac Ozel Musteri olur: basePrice %50 fazla oder, kisa
+        // bir kabul penceresi vardir (CustomerVehicle icinde zaten kurulu zamanlayici).
+        bool isSpecialDayEligible = !(disableSpecialCustomerOnDayOne && currentDayForSpawning <= 1);
+        bool rolledSpecial = isSpecialDayEligible && Random.value < specialCustomerChance;
+
+        if (rolledSpecial)
+        {
+            testOrder.basePrice *= specialCustomerPriceMultiplier;
+            customerVehicle.IsSpecial = true;
+            customerVehicle.OnSpecialCustomerMissed += HandleVehicleMissedSpecialWindow;
+        }
+
         customerVehicle.CurrentOrder = testOrder; // T26: StandInteraction'in okuyabilmesi icin araca kaydedilir
         Debug.Log("[VehicleSpawner] Test araci spawn edildi: " + vehicleInstance.name +
                    " | Siparis: " + testOrder.count + "x " + testOrder.species +
-                   " (" + testOrder.direction + ") basePrice=" + testOrder.basePrice);
+                   " (" + testOrder.direction + ") basePrice=" + testOrder.basePrice +
+                   (rolledSpecial ? " | OZEL MUSTERI (x" + specialCustomerPriceMultiplier + ")" : ""));
 
-        NotifyVehicleArrivedClientRpc(testOrder.species, testOrder.count, testOrder.direction);
+        NotifyVehicleArrivedClientRpc(testOrder.species, testOrder.count, testOrder.direction, rolledSpecial);
 
+    }
+
+    /// <summary>T58: CustomerVehicle.OnSpecialCustomerMissed aboneligi - Ozel Musteri kabul
+    /// penceresi dolup kendiliginden ayrildiginda cagrilir. Streak'e (T59) DOKUNMAZ, sadece
+    /// ayri/cezasiz MissedSpecialCustomers sayacini artirir. Abonelikten de kendini cikarir
+    /// (arac zaten despawn oluyor, tekrar tetiklenmeyecek olsa da hijyen icin).</summary>
+    private void HandleVehicleMissedSpecialWindow(CustomerVehicle vehicle)
+    {
+        MissedSpecialCustomers++;
+        Debug.Log("[VehicleSpawner] Ozel Musteri kacirildi (Streak etkilenmedi). Toplam kacirilan: " + MissedSpecialCustomers);
+        vehicle.OnSpecialCustomerMissed -= HandleVehicleMissedSpecialWindow;
     }
 
     /// <summary>Gun 2+ icin rastgele siparis uretir: allAnimalData'dan rastgele bir tur, 1-3
@@ -242,7 +362,7 @@ public override void OnNetworkSpawn()
             return new OrderData(AnimalSpecies.Chicken, testOrderCount, testOrderDirection, testAnimalData);
         }
 
-        var randomAnimal = allAnimalData[Random.Range(0, allAnimalData.Length)];
+        var randomAnimal = PickWeightedRandomAnimal();
 
         // BUG DUZELTMESI (kullanici raporu: 2 Inek/2 At siparisi gelip tasima imkansiz hale
         // geliyordu). Agir hayvanlarin (Inek/At) tasima kapasitesi karakter basina 1'dir
@@ -253,6 +373,31 @@ public override void OnNetworkSpawn()
         OrderDirection randomDirection = (Random.value < 0.5f) ? OrderDirection.Satis : OrderDirection.Alim;
 
         return new OrderData(randomAnimal.species, randomCount, randomDirection, randomAnimal);
+    }
+
+    /// <summary>T57: allAnimalData icinden dailyDemandWeights'e gore agirlikli rastgele bir
+    /// tur secer. dailyDemandWeights null/bos ise (RollDailyDemandWeights hic cagrilmamissa,
+    /// ornegin Gun 1'den once bir yerde cagrilirsa) esit dagilima (eski davranis) guvenli
+    /// sekilde geri doner.</summary>
+    private AnimalData PickWeightedRandomAnimal()
+    {
+        if (dailyDemandWeights == null || dailyDemandWeights.Length != allAnimalData.Length)
+        {
+            return allAnimalData[Random.Range(0, allAnimalData.Length)];
+        }
+
+        float totalWeight = 0f;
+        for (int i = 0; i < dailyDemandWeights.Length; i++) totalWeight += dailyDemandWeights[i];
+
+        float roll = Random.Range(0f, totalWeight);
+        float cumulative = 0f;
+        for (int i = 0; i < dailyDemandWeights.Length; i++)
+        {
+            cumulative += dailyDemandWeights[i];
+            if (roll <= cumulative) return allAnimalData[i];
+        }
+
+        return allAnimalData[allAnimalData.Length - 1]; // guvenlik agi (float yuvarlama)
     }
 
     private void RefreshQueueTargets()
@@ -302,11 +447,11 @@ public override void OnNetworkSpawn()
 
     /// <summary>T37: Sunucu tarafinda spawn tamamlaninca tum client'lara "Arac geldi!" HUD uyarisini tetikler.</summary>
     [ClientRpc]
-    private void NotifyVehicleArrivedClientRpc(AnimalSpecies species, int count, OrderDirection direction)
+    private void NotifyVehicleArrivedClientRpc(AnimalSpecies species, int count, OrderDirection direction, bool isSpecial)
     {
         if (HUDController.Instance != null)
         {
-            HUDController.Instance.ShowVehicleArrivedAlert(species, count, direction);
+            HUDController.Instance.ShowVehicleArrivedAlert(species, count, direction, isSpecial);
         }
     }
 }

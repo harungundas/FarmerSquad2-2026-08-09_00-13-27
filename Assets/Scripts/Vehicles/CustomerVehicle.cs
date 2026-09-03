@@ -48,6 +48,21 @@ public class CustomerVehicle : NetworkBehaviour
     public bool IsWaitingAtStand => isWaitingAtStand;
     private bool isHeadingToDespawn = false;
 
+    // ---- T58 - Ozel Musteri ----
+    [Header("T58 - Ozel Musteri")]
+    [Tooltip("VehicleSpawner tarafindan spawn aninda ayarlanir. true ise bu arac normalden %50 fazla odeyen ozel musteridir ve kisa bir kabul penceresi vardir.")]
+    public bool IsSpecial = false;
+    [Tooltip("Ozel musterinin StandFront'a ulastiktan sonra bekleyecegi maksimum sure saniye. Sadece IsSpecial=true iken kullanilir - normal musteriler icin hicbir zamanlayici YOK spec geregi, sinif yorumuna bkz.")]
+    public float specialAcceptWindowSeconds = 37.5f;
+
+    private float specialWindowTimer = 0f;
+    private bool specialWindowActive = false;
+
+    /// <summary>T58: Ozel musteri kacirildiginda (kabul penceresi dolup arac kendiliginden
+    /// ayrildiginda) VehicleSpawner'a bildirim - ayri, cezasiz sayaci artirmasi icin.
+    /// Normal ResolveOrder() (oyuncu tarafindan sonuclandirilan islem) BU YOLU KULLANMAZ.</summary>
+    public System.Action<CustomerVehicle> OnSpecialCustomerMissed;
+
     private void Awake()
     {
         animator = GetComponentInChildren<Animator>();
@@ -98,7 +113,20 @@ public class CustomerVehicle : NetworkBehaviour
         if (isWaitingAtStand)
         {
             SetMovingAnim(false);
-            return; // Sonsuza kadar bekler, ResolveOrder() cagrilana kadar hicbir zamanlayici YOK.
+
+            // T58: SADECE ozel musteri icin kisa bir kabul penceresi zamanlayicisi calisir.
+            // Normal musteriler icin hicbir zamanlayici YOK (mevcut davranis - sinif yorumuna bkz).
+            if (IsSpecial && specialWindowActive)
+            {
+                specialWindowTimer -= Time.deltaTime;
+                if (specialWindowTimer <= 0f)
+                {
+                    specialWindowActive = false;
+                    HandleSpecialCustomerMissed();
+                }
+            }
+
+            return; // Normalde sonsuza kadar bekler, ResolveOrder() cagrilana kadar.
         }
 
         if (currentTarget == null)
@@ -142,11 +170,38 @@ public class CustomerVehicle : NetworkBehaviour
         {
             isWaitingAtStand = true;
             PlayHornClientRpc(); // Kullanici talebi: standa giris yapan arac TEK BIR KEZ korna calar.
+
+            // T58: StandFront'a ulasan arac ozelse, burada kabul penceresi zamanlayicisi baslar.
+            if (IsSpecial)
+            {
+                specialWindowTimer = specialAcceptWindowSeconds;
+                specialWindowActive = true;
+            }
+
             return;
         }
 
         // Kuyruk slotlarindan birine (StandFront disinda) ulasildi - spawner'in
         // RefreshQueueTargets'i zaten periyodik olarak hedefi guncelleyecek.
+    }
+
+    /// <summary>T58: Ozel musterinin kabul penceresi dolup arac kendiliginden ayrildiginda
+    /// cagrilir. Normal ResolveOrder() akisindan TAMAMEN AYRI: Streak sayacini (T59) KIRMAZ,
+    /// sadece ayri/cezasiz OnSpecialCustomerMissed action'ini tetikler (VehicleSpawner bu
+    /// aboneligi kullanarak kendi missedSpecialCustomers sayacini artirir - bkz. TASKS.md T58).
+    /// Aracin kendisi normal bir ResolveOrder() gibi degil, direkt despawn'a yonlendirilir
+    /// (siparis sonuclanmadi, sadece kacirildi - kuyruk spawner tarafindan ayni sekilde
+    /// guncellenir).</summary>
+    private void HandleSpecialCustomerMissed()
+    {
+        if (!isWaitingAtStand) return;
+        isWaitingAtStand = false;
+        isHeadingToDespawn = true;
+
+        OnSpecialCustomerMissed?.Invoke(this);
+
+        spawner.OnVehicleLeavingStandServer(this);
+        SetTarget(spawner.DespawnPoint);
     }
 
     [ClientRpc]

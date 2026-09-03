@@ -53,6 +53,9 @@ public class NegotiationManager : NetworkBehaviour
     public PrestigeManager prestigeManager;
     [Tooltip("T38: Satis/Alim/pazarlik istatistikleri buraya raporlanir (WinScreenController icin).")]
     public GameStatsTracker gameStatsTracker;
+    [Tooltip("T54/T55: Satış/Alım Ustalığı seviyelerini okumak için (MarketManager).")]
+    public MarketManager marketManager;
+
 
 
     [Header("Hayvan Veritabani (T28 - Alim siparisinde dogru prefabi spawn etmek icin)")]
@@ -119,7 +122,7 @@ public class NegotiationManager : NetworkBehaviour
             species = species,
             count = count,
             direction = direction,
-            baseOffer = basePrice,
+            baseOffer = ApplyMasteryAdjustment(basePrice, direction),
             playerCounter = 0f,
             finalOffer = 0f,
             resolved = false,
@@ -532,7 +535,27 @@ public void RequestNegotiateServerRpc(float playerOfferedPrice, ServerRpcParams 
         return null;
     }
 
-    private bool IsValidCaller(ServerRpcParams rpcParams, NegotiationStage expectedStage)
+    /// <summary>T54/T55: MarketManager'daki Satış/Alım Ustalığı seviyesine göre baseOffer'ı
+    /// ayarlar. Satış yönünde her seviye +%4 (satış fiyatı artar), Alım yönünde her seviye
+    /// -%4 (alım maliyeti düşer). marketManager atanmamışsa değişiklik yapılmaz.</summary>
+    private float ApplyMasteryAdjustment(float rawBasePrice, OrderDirection direction)
+    {
+        if (marketManager == null) return rawBasePrice;
+
+        if (direction == OrderDirection.Satis)
+        {
+            int level = marketManager.GetLeveledUpgradeLevel(MarketManager.SalesMasteryId);
+            return rawBasePrice * (1f + 0.04f * level);
+        }
+        else
+        {
+            int level = marketManager.GetLeveledUpgradeLevel(MarketManager.BuyMasteryId);
+            return rawBasePrice * (1f - 0.04f * level);
+        }
+    }
+
+    
+private bool IsValidCaller(ServerRpcParams rpcParams, NegotiationStage expectedStage)
     {
         var s = State.Value;
         if (s.stage != expectedStage)

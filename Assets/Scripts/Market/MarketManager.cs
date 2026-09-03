@@ -136,6 +136,14 @@ public class MarketManager : NetworkBehaviour
             return;
         }
 
+        // T56: Pazar Rotasyonu - bu kota doneminde kilitli 2 upgrade'den biriyse server-side reddet.
+        if (IsUpgradeLocked(upgradeIndex, DayJustCompleted.Value))
+        {
+            Debug.Log("[MarketManager] " + entry.displayNameTr + " bu kota doneminde (Gun " +
+                       DayJustCompleted.Value + " sonu) rotasyonla kilitli, satin alinamaz.");
+            return;
+        }
+
         if (walletManager.Balance.Value < entry.price)
         {
             Debug.Log("[MarketManager] Yetersiz bakiye: " + entry.displayNameTr + " icin " + entry.price +
@@ -260,5 +268,42 @@ public class MarketManager : NetworkBehaviour
 
         Debug.Log("[MarketManager] Leveled upgrade satin alindi: id=" + upgradeId + " -> seviye " + newLevel +
                    " (" + cost + "$).");
+    }
+
+    // ===== T56: Pazar Rotasyonu =====
+    // Her kota doneminde 6 bitmask upgrade'den 2'si kilitlenir, 3'lu bir dongude tekrarlanir.
+    // kotaNo = day / 3 (Gun 3 -> kotaNo 1, Gun 6 -> kotaNo 2, ... Gun 18 -> kotaNo 6).
+    // Dongu index = (kotaNo - 1) % 3 -> her donguye 2 sabit index cifti atanir (TASKS.md T56 tablosu):
+    //   dongu 0 (kotaNo 1,4): FarmSkill(4), NegotiationMastery(5)
+    //   dongu 1 (kotaNo 2,5): Wheelbarrow(0), AutoFeeder(1)
+    //   dongu 2 (kotaNo 3,6): WidePens(2), LogisticsFitness(3)
+    // Leveled upgrade'ler (Satis/Alim Ustaligi) bu rotasyonun disindadir, hep erisilebilir.
+    private static readonly int[][] LockedRotation = new int[][]
+    {
+        new int[] { 4, 5 }, // Ciftlik Becerisi, Pazarlik Ustaligi
+        new int[] { 0, 1 }, // El Arabasi, Yem Dagitici
+        new int[] { 2, 3 }, // Genis Citler, Lojistik Kondisyonu
+    };
+
+    /// <summary>Verilen gun (kota doneminin bittigi gun, orn. 3/6/9/12/15/18) icin kilitli 2 upgrade index'ini dondurur.
+    /// day &lt;= 0 veya kota yapisina uymuyorsa (orn. henuz hic gun tamamlanmadi) hicbir sey kilitlemez (bos dizi).</summary>
+    public static int[] GetLockedUpgradeIndices(int day)
+    {
+        if (day <= 0) return new int[0];
+        int kotaNo = day / 3;
+        if (kotaNo <= 0) return new int[0];
+        int rotationIndex = (kotaNo - 1) % 3;
+        return LockedRotation[rotationIndex];
+    }
+
+    /// <summary>upgradeIndex, verilen gunun kota rotasyonunda kilitli mi.</summary>
+    public static bool IsUpgradeLocked(int upgradeIndex, int day)
+    {
+        int[] locked = GetLockedUpgradeIndices(day);
+        for (int i = 0; i < locked.Length; i++)
+        {
+            if (locked[i] == upgradeIndex) return true;
+        }
+        return false;
     }
 }
